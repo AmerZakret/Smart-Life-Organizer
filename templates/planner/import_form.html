@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="max-w-md mx-auto p-6 bg-white rounded-xl shadow-sm">
+  <h2 class="text-lg font-semibold mb-4">Import Events / Habits</h2>
+  <form method="post" enctype="multipart/form-data">{% csrf_token %}
+    <input type="file" name="file" accept=".csv,.ics" />
+    <div class="mt-4">
+      <button type="submit" class="px-4 py-2 bg-teal-600 text-white rounded-xl">Upload</button>
+    </div>
+  </form>
+  <p class="text-xs text-slate-400 mt-2">CSV format: type,title,start_time,end_time,category,description</p>
+</div>
+{% endblock %}

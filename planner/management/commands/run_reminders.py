@@ -110,16 +110,10 @@ class Command(BaseCommand):
         )
         logger.info("Reminder service started (interval=%ss).", interval)
 
-        # Schedule the job
-        schedule.every(interval).seconds.do(_check_reminders)
-
-        # Run immediately on startup so you don't wait a full interval
+        # The management command remains for local use, but when Celery is
+        # configured we recommend running the Celery beat scheduler instead.
+        self.stdout.write(self.style.WARNING(
+            "\nReminder service (legacy) — use Celery beat for production.\n"
+        ))
+        # Run a single check on demand
         _check_reminders()
-
-        try:
-            while True:
-                schedule.run_pending()
-                time.sleep(1)   # tight sleep keeps the loop responsive to Ctrl-C
-        except KeyboardInterrupt:
-            self.stdout.write(self.style.WARNING("\n Reminder service stopped by user.\n"))
-            logger.info("Reminder service stopped.")

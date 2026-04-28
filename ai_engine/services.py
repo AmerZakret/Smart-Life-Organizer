@@ -17,16 +17,24 @@ Public API
 import os
 import logging
 
-from google import genai
-from google.genai import types as genai_types
-
 logger = logging.getLogger(__name__)
+
+# Try to import the google/genai SDK; if it's not installed, degrade gracefully.
+try:
+    from google import genai
+    from google.genai import types as genai_types
+    _GENAI_AVAILABLE = True
+except Exception:
+    genai = None
+    genai_types = None
+    _GENAI_AVAILABLE = False
+    logger.warning("google.genai SDK not available; AI tip generation disabled.")
 
 # ── Gemini client initialisation ──────────────────────────────────────────────
 _GEMINI_API_KEY: str | None = os.environ.get("GEMINI_API_KEY", "")
 
 _CLIENT_READY: bool = bool(
-    _GEMINI_API_KEY and _GEMINI_API_KEY != "your_gemini_api_key_here"
+    _GENAI_AVAILABLE and _GEMINI_API_KEY and _GEMINI_API_KEY != "your_gemini_api_key_here"
 )
 
 if _CLIENT_READY:
@@ -34,18 +42,22 @@ if _CLIENT_READY:
     logger.info("Gemini client initialised successfully.")
 else:
     _client = None
-    logger.warning(
-        "GEMINI_API_KEY is not set or is still the placeholder value. "
-        "AI tips will be disabled until a valid key is provided in .env"
-    )
+    if _GENAI_AVAILABLE:
+        logger.warning(
+            "GEMINI_API_KEY is not set or is still the placeholder value. "
+            "AI tips will be disabled until a valid key is provided in .env"
+        )
 
 # ── Model + generation settings ───────────────────────────────────────────────
 _MODEL_NAME = "gemini-1.5-flash"
 
-_GENERATE_CONTENT_CONFIG = genai_types.GenerateContentConfig(
-    max_output_tokens=60,   # well above 15 words but cheap insurance
-    temperature=0.4,        # focused but slightly varied
-)
+if _GENAI_AVAILABLE and genai_types is not None:
+    _GENERATE_CONTENT_CONFIG = genai_types.GenerateContentConfig(
+        max_output_tokens=60,   # well above 15 words but cheap insurance
+        temperature=0.4,        # focused but slightly varied
+    )
+else:
+    _GENERATE_CONTENT_CONFIG = None
 
 # ── System prompt (exact spec from plan.txt §5) ───────────────────────────────
 _SYSTEM_PROMPT_TEMPLATE = (

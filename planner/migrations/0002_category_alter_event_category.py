@@ -9,18 +9,19 @@ def create_categories_from_strings(apps, schema_editor):
     Event = apps.get_model('planner', 'Event')
     Category = apps.get_model('planner', 'Category')
     
-    # Get all unique users and categories
-    for event in Event.objects.all().raw('SELECT DISTINCT user_id, category FROM planner_event'):
+    # Get all unique users and categories using ORM (raw() must include PK)
+    for row in Event.objects.values('user_id', 'category').distinct():
         try:
-            # The category field is still a string at this point
-            cat_string = event.category
+            cat_string = row.get('category')
+            user_id = row.get('user_id')
             if cat_string:
                 Category.objects.get_or_create(
-                    user_id=event.user_id,
+                    user_id=user_id,
                     name=cat_string,
                     defaults={'color': '#0d9488'}
                 )
         except Exception:
+            # Avoid migration failure on unexpected data issues
             pass
 
 

@@ -45,40 +45,40 @@
         <div class="p-4">
             {% if events %}
             <div class="space-y-2" id="events-container">
-                {% for event in events %}
+                {% for occ in events %}
                 <div class="flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all group">
                     <!-- Date badge -->
                     <div class="shrink-0 w-12 h-12 rounded-xl flex flex-col items-center justify-center
-                        {% if event.category == 'Work' %}bg-blue-50 text-blue-600
-                        {% elif event.category == 'Health' %}bg-emerald-50 text-emerald-600
-                        {% else %}bg-purple-50 text-purple-600{% endif %}">
-                        <p class="text-lg font-bold leading-none">{{ event.start_time|date:"d" }}</p>
-                        <p class="text-xs font-medium uppercase">{{ event.start_time|date:"M" }}</p>
+                        {% if occ.category and occ.category.name == 'Work' %}bg-blue-50 text-blue-600
+                            {% elif occ.category and occ.category.name == 'Health' %}bg-emerald-50 text-emerald-600
+                            {% else %}bg-purple-50 text-purple-600{% endif %}">
+                        <p class="text-lg font-bold leading-none">{{ occ.start_time|date:"d" }}</p>
+                        <p class="text-xs font-medium uppercase">{{ occ.start_time|date:"M" }}</p>
                     </div>
                     <!-- Details -->
                     <div class="flex-1 min-w-0">
-                        <p class="text-sm font-semibold text-slate-800 truncate {{ event.is_completed|yesno:'line-through text-slate-400,' }}">
-                            {{ event.title }}
+                        <p class="text-sm font-semibold text-slate-800 truncate {{ occ.event.is_completed|yesno:'line-through text-slate-400,' }}">
+                            {{ occ.title }}
                         </p>
                         <div class="flex items-center gap-2 mt-0.5 flex-wrap">
-                            <span class="text-xs text-slate-400">{{ event.start_time|date:"D, H:i" }} → {{ event.end_time|time:"H:i" }}</span>
+                            <span class="text-xs text-slate-400">{{ occ.start_time|date:"D, H:i" }} → {{ occ.end_time|time:"H:i" }}</span>
                             <span class="inline-flex items-center px-1.5 py-0.5 rounded-md text-xs font-medium
-                                {% if event.category == 'Work' %}bg-blue-50 text-blue-600
-                                {% elif event.category == 'Health' %}bg-emerald-50 text-emerald-600
+                                {% if occ.category and occ.category.name == 'Work' %}bg-blue-50 text-blue-600
+                                {% elif occ.category and occ.category.name == 'Health' %}bg-emerald-50 text-emerald-600
                                 {% else %}bg-purple-50 text-purple-600{% endif %}">
-                                {{ event.category }}
+                                {% if occ.category %}{{ occ.category.name }}{% endif %}
                             </span>
-                            {% if event.is_completed %}
-                            <span class="inline-flex items-center px-1.5 py-0.5 rounded-md text-xs font-medium bg-teal-50 text-teal-600">✓ Completed</span>
+                            {% if occ.event.is_completed %}
+                                <span class="inline-flex items-center px-1.5 py-0.5 rounded-md text-xs font-medium bg-teal-50 text-teal-600">✓ Completed</span>
                             {% endif %}
                         </div>
-                        {% if event.description %}
-                        <p class="text-xs text-slate-400 truncate mt-0.5">{{ event.description }}</p>
+                        {% if occ.description %}
+                        <p class="text-xs text-slate-400 truncate mt-0.5">{{ occ.description }}</p>
                         {% endif %}
                     </div>
                     <!-- AI tip indicator -->
-                    {% if event.aitip %}
-                    <div class="shrink-0" title="{{ event.aitip.tip_text }}">
+                    {% if occ.event.aitip %}
+                    <div class="shrink-0" title="{{ occ.event.aitip.tip_text }}">
                         <span class="w-7 h-7 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center text-sm">💡</span>
                     </div>
                     {% endif %}

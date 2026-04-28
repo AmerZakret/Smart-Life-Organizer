@@ -128,6 +128,14 @@
                 <h2 class="text-sm font-semibold text-slate-800">Habits</h2>
                 <span class="text-xs text-slate-400 bg-slate-100 rounded-full px-2 py-0.5">{{ habits.count }} active</span>
             </div>
+            <div class="mb-3">
+                <form id="create-habit-form" class="flex gap-2">
+                    <input id="habit-name-input" type="text" placeholder="Add new habit (e.g. Drink water)"
+                        class="flex-1 px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                    <button id="btn-create-habit" type="button" class="px-4 py-2 rounded-xl bg-amber-500 text-white text-sm font-medium">Add</button>
+                </form>
+            </div>
+
             <div class="space-y-2" id="habits-list">
                 {% for habit in habits %}
                 <div class="flex items-center justify-between p-3 rounded-xl border border-slate-100 hover:border-teal-100 hover:bg-teal-50/30 transition-colors"
@@ -152,7 +160,7 @@
                 {% empty %}
                 <div class="text-center py-8">
                     <p class="text-sm text-slate-400">No habits yet.</p>
-                    <p class="text-xs text-slate-300 mt-1">Add habits via the Django Admin.</p>
+                    <p class="text-xs text-slate-300 mt-1">Add habits to achieve streaks.</p>
                 </div>
                 {% endfor %}
             </div>
@@ -203,5 +211,53 @@ function toggleHabit(habitId) {
     })
     .catch(() => {});
 }
+// Create habit handler
+document.getElementById('btn-create-habit').addEventListener('click', function() {
+    const name = document.getElementById('habit-name-input').value.trim();
+    const errBox = null;
+    if (!name) return;
+
+    const csrfToken = '{{ csrf_token }}';
+    fetch('/api/habits/create/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            // Prepend new habit to list
+            const container = document.getElementById('habits-list');
+            if (container) {
+                const el = document.createElement('div');
+                el.id = `habit-row-${data.id}`;
+                el.className = 'flex items-center justify-between p-3 rounded-xl border border-slate-100 hover:border-teal-100 hover:bg-teal-50/30 transition-colors';
+                el.innerHTML = `
+                    <div class="flex items-center gap-3 min-w-0">
+                        <button id="habit-toggle-${data.id}" onclick="toggleHabit(${data.id})" class="w-8 h-8 rounded-lg border-2 border-slate-200 flex items-center justify-center text-white shrink-0 transition-all hover:border-teal-500 hover:bg-teal-50" aria-label="Toggle habit ${data.name}"></button>
+                        <div class="min-w-0">
+                            <p class="text-sm font-medium text-slate-700 truncate">${data.name}</p>
+                            <p class="text-xs text-slate-400">Last: ${data.last_completed_date || 'Never'}</p>
+                        </div>
+                    </div>
+                    <div class="text-right shrink-0 ml-2">
+                        <p class="text-lg font-bold text-slate-900" id="streak-${data.id}">${data.current_streak}</p>
+                        <p class="text-xs text-amber-500 font-medium">🔥 streak</p>
+                    </div>`;
+                container.prepend(el);
+                document.getElementById('habit-name-input').value = '';
+            }
+        } else {
+            // Optionally show error
+            alert(data.error || 'Could not create habit.');
+        }
+    })
+    .catch(() => {
+        alert('Network error — habit not created.');
+    });
+});
 </script>
 {% endblock %}

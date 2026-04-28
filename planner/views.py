@@ -11,7 +11,13 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from ai_engine.models import AITip
-from .models import Event, Habit
+from .models import Event, Habit, Category
+from .utils import expand_events_for_range
+import csv
+from django.http import HttpResponse
+from icalendar import Calendar, Event as IcsEvent
+from django.views.decorators.http import require_GET, require_POST
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +43,8 @@ def dashboard(request):
     ).select_related('event').first()
 
     # Plotly pie chart
-    categories = [e.category for e in events_today]
+    # category is now a FK to Category; use its name for counts
+    categories = [e.category.name for e in events_today if e.category]
     if categories:
         cat_counts = {c: categories.count(c) for c in set(categories)}
         fig = px.pie(
@@ -67,13 +74,14 @@ def dashboard(request):
 @login_required
 def calendar(request):
     user_profile = request.user.userprofile
-    events = (
-        Event.objects
-        .filter(user=user_profile)
-        .select_related('aitip')
-        .order_by('start_time')
-    )
-    context = {'events': events}
+    # Show events for the next 30 days (expand recurring events)
+    from django.utils import timezone
+    now = timezone.now()
+    window_end = now + timezone.timedelta(days=30)
+
+    events_qs = Event.objects.filter(user=user_profile).select_related('aitip')
+    occurrences = expand_events_for_range(events_qs, now, window_end)
+    context = {'events': occurrences}
     return render(request, 'planner/calendar.html', context)
 
 
@@ -163,13 +171,20 @@ def api_create_event(request):
 
     # ── Create ────────────────────────────────────────────────────────────────
     user_profile = request.user.userprofile
+    # Ensure category is a Category instance (FK)
+    category_obj, _ = Category.objects.get_or_create(
+        user=user_profile,
+        name=category,
+        defaults={'color': '#0d9488'}
+    )
+
     event = Event.objects.create(
         user=user_profile,
         title=title,
         description=description,
         start_time=start_time,
         end_time=end_time,
-        category=category,
+        category=category_obj,
     )
     logger.info("Event '%s' (id=%s) created for user '%s'.", title, event.pk, request.user.username)
 
@@ -179,7 +194,7 @@ def api_create_event(request):
         'title':      event.title,
         'start_time': event.start_time.isoformat(),
         'end_time':   event.end_time.isoformat(),
-        'category':   event.category,
+        'category':   event.category.name if event.category else None,
     }, status=201)
 
 
@@ -234,3 +249,156 @@ def api_toggle_habit(request, habit_id):
         'last_completed': str(today),
         'already_done':   False,
     })
+
+
+@login_required
+@require_GET
+def export_csv(request):
+    """Export user's Events and Habits as CSV."""
+    user_profile = request.user.userprofile
+
+    # Events
+    events = Event.objects.filter(user=user_profile).order_by('start_time')
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="smartlife_export.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow(['type', 'title', 'start_time', 'end_time', 'category', 'description'])
+    for e in events:
+        writer.writerow(['event', e.title, e.start_time.isoformat(), e.end_time.isoformat(), e.category.name if e.category else '', e.description])
+
+    # Habits
+    habits = Habit.objects.filter(user=user_profile)
+    for h in habits:
+        writer.writerow(['habit', h.name, '', '', '', ''])
+
+    return response
+
+
+@login_required
+@require_GET
+def export_ics(request):
+    """Export user's events as an .ics calendar."""
+    user_profile = request.user.userprofile
+    events = Event.objects.filter(user=user_profile)
+
+    cal = Calendar()
+    cal.add('prodid', '-//Smart Life Organizer//')
+    cal.add('version', '2.0')
+
+    for e in events:
+        comp = IcsEvent()
+        comp.add('summary', e.title)
+        comp.add('dtstart', e.start_time)
+        comp.add('dtend', e.end_time)
+        if e.rrule:
+            # naive: set raw RRULE string (icalendar expects dict-like vRecur)
+            for part in e.rrule.split(';'):
+                if not part:
+                    continue
+                k, v = part.split('=')
+                comp.add('rrule', {k: v})
+        comp.add('description', e.description or '')
+        cal.add_component(comp)
+
+    response = HttpResponse(cal.to_ical(), content_type='text/calendar')
+    response['Content-Disposition'] = 'attachment; filename="smartlife_events.ics"'
+    return response
+
+
+@login_required
+def import_events(request):
+    """Simple upload handler to import CSV or ICS files."""
+    user_profile = request.user.userprofile
+    if request.method == 'POST':
+        f = request.FILES.get('file')
+        if not f:
+            return JsonResponse({'success': False, 'error': 'No file uploaded.'}, status=400)
+
+        name = f.name.lower()
+        created = 0
+        if name.endswith('.csv'):
+            text = f.read().decode('utf-8')
+            reader = csv.reader(text.splitlines())
+            for row in reader:
+                if not row:
+                    continue
+                if row[0].lower() == 'event' and len(row) >= 6:
+                    title = row[1]
+                    try:
+                        start = timezone.datetime.fromisoformat(row[2])
+                        end = timezone.datetime.fromisoformat(row[3])
+                    except Exception:
+                        continue
+                    cat_name = row[4]
+                    cat = None
+                    if cat_name:
+                        cat, _ = Category.objects.get_or_create(user=user_profile, name=cat_name)
+                    Event.objects.create(user=user_profile, title=title, start_time=start, end_time=end, category=cat, description=row[5])
+                    created += 1
+                elif row[0].lower() == 'habit' and len(row) >= 2:
+                    Habit.objects.get_or_create(user=user_profile, name=row[1])
+                    created += 1
+
+        elif name.endswith('.ics'):
+            data = f.read()
+            try:
+                cal = Calendar.from_ical(data)
+            except Exception:
+                return JsonResponse({'success': False, 'error': 'Invalid ICS file.'}, status=400)
+            for component in cal.walk():
+                if component.name == 'VEVENT':
+                    title = str(component.get('summary'))
+                    dtstart = component.get('dtstart').dt
+                    dtend = component.get('dtend').dt if component.get('dtend') else (dtstart + timezone.timedelta(hours=1))
+                    rrule = component.get('rrule')
+                    rrule_str = None
+                    if rrule:
+                        # Convert vRecur dict to RFC string
+                        parts = []
+                        for k, v in rrule.items():
+                            parts.append(f"{k}={','.join(v)}")
+                        rrule_str = ';'.join(parts)
+                    Event.objects.create(user=user_profile, title=title, start_time=dtstart, end_time=dtend, rrule=rrule_str)
+                    created += 1
+        else:
+            return JsonResponse({'success': False, 'error': 'Unsupported file type.'}, status=400)
+
+        return JsonResponse({'success': True, 'created': created})
+
+    # GET -> render a simple upload form
+    return render(request, 'planner/import_form.html')
+
+
+@login_required
+@require_POST
+def api_create_habit(request):
+    """
+    POST /api/habits/create/
+    Body: { "name": "Drink water" }
+    Returns habit JSON.
+    """
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'Invalid JSON body.'}, status=400)
+
+    name = (data.get('name') or '').strip()
+    if not name:
+        return JsonResponse({'success': False, 'error': 'Name is required.'}, status=400)
+    if len(name) > 100:
+        return JsonResponse({'success': False, 'error': 'Name must be ≤ 100 characters.'}, status=400)
+
+    user_profile = request.user.userprofile
+    habit, created = Habit.objects.get_or_create(user=user_profile, name=name)
+
+    status = 201 if created else 200
+    return JsonResponse({
+        'success': True,
+        'id': habit.pk,
+        'name': habit.name,
+        'current_streak': habit.current_streak,
+        'last_completed_date': str(habit.last_completed_date) if habit.last_completed_date else None,
+        'created': created,
+    }, status=status)

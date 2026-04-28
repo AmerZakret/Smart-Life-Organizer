@@ -1,0 +1,44 @@
+Act as an Expert Principal Python Developer and Django Architect. We are continuing the development of the "Smart Life Organizer" application. Your task is to implement the advanced production-ready features to upgrade our current system.
+
+You must build this strictly step-by-step. Do NOT write the entire codebase in one response. Acknowledge this master prompt, then wait for me to say "Execute Phase [X]" before writing the code for that specific phase.
+
+### 1. Expanded Technical Environment & Stack
+* **Background Workers:** Migrate from `schedule` to `Celery` with `Redis` as the message broker.
+* **Data Parsing:** `icalendar` library for ICS parsing, built-in `csv` module for CSV.
+* **DevOps & Monitoring:** GitHub Actions (CI/CD), `sentry-sdk` (Error tracking).
+* **Code Quality:** `ruff` (linting) and `black`/`isort` (formatting) via pre-commit or CI.
+
+### 2. Required Feature Specifications
+
+**A. Advanced Authentication (Email Flows)**
+* Implement Django's built-in password reset views (`PasswordResetView`, `PasswordResetConfirmView`, etc.).
+* Implement an email verification flow upon registration (generate a secure token, send an email, verify the token via a specific URL before `is_active` is set to True).
+
+**B. Recurring Events & Exceptions**
+* Expand the `Event` model to support recurrence rules (e.g., using `django-recurrence` or storing an RFC 5545 RRULE string).
+* Create an `EventException` model to handle modifications or cancellations of specific instances of a recurring event.
+
+**C. Export/Import Utilities**
+* Create views/actions to export a user's Events and Habits to `.csv` and `.ics` formats.
+* Create an upload form/view to parse an uploaded `.ics` or `.csv` file and bulk-create `Event` records.
+
+**D. Advanced Notifications**
+* Expand the `UserProfile` model with boolean toggles: `email_notifications_enabled`, `webhook_notifications_enabled`.
+* Add a `webhook_url` URLField to the `UserProfile`.
+* Update the reminder system to trigger Celery tasks that send actual emails (using Django's `send_mail`) and HTTP POST requests to the user's webhook URL, based on their preferences.
+
+**E. Production Hardening & CI**
+* Integrate Sentry SDK in `settings.py`.
+* Implement a security checklist in `settings.py` (e.g., `SECURE_SSL_REDIRECT`, `SESSION_COOKIE_SECURE`, `CSRF_COOKIE_SECURE`, `SECURE_HSTS_SECONDS` controlled by an environment variable).
+* Create a `.github/workflows/django.yml` file for running `pytest`, `ruff`, and `black` on push/pull_request.
+
+### Execution Phases (Acknowledge ONLY, do not execute yet):
+
+* **Phase 8:** Celery & Redis Setup. (Configure `celery.py`, update `settings.py`, and migrate the existing reminder management command into a Celery beat task).
+* **Phase 9:** Advanced Authentication. (Configure dummy email backend for dev, set up password reset templates, and build the email verification flow).
+* **Phase 10:** Event Models Expansion. (Update `models.py` for recurring events and exceptions, create migrations, and update the calendar view to render recurring instances).
+* **Phase 11:** Import/Export Features. (Write the utility scripts and Django views to handle CSV and ICS file generation and parsing).
+* **Phase 12:** Advanced Notifications. (Update `UserProfile` preferences, write the Celery tasks for sending notification emails and webhook payloads).
+* **Phase 13:** Production DevOps. (Provide the GitHub Actions YAML, Sentry integration code, and security settings hardening).
+
+Reply exactly with: "Master architect instructions loaded. I understand the advanced feature requirements, including Celery, Auth flows, and CI/CD integrations. Awaiting your command to execute Phase 8."

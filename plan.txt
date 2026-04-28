@@ -3,13 +3,13 @@ Act as an Expert Principal Python Developer and Django Architect. Your task is t
 You must build this strictly step-by-step. Do NOT write the entire codebase in one response. Acknowledge this master prompt, then wait for me to say "Execute Phase [X]" before writing the code for that specific phase.
 
 ### 1. Strict Technical Environment & Stack
-* **Language:** Python 3.12.4.
-* **Backend:** Django 5.x.
+* **Language:** Python 3.12+ (repository currently running Python 3.14; target 3.12–3.14 compatible).
+* **Backend:** Django 6.x (repository uses Django 6.0.4). The implementation in this repo targets Django 6; adjust plan constraints accordingly.
 * **Database:** SQLite3 (default).
 * **Authentication:** Django's built-in authentication system (local username/email and password registration/login). Do not use any third-party auth services.
-* **AI Provider:** `google-generativeai` library (Gemini 1.5 Flash or Pro model). 
+* **AI Provider:** `google-genai` (google.genai) library (Gemini 1.5 Flash or Pro model). The repo uses `google.genai` import style; install `google-genai` to enable tips.
 * **Environment Variables:** `python-dotenv` to manage secure keys in a `.env` file.
-* **Background Tasks:** `schedule` library running via a custom Django management command.
+* **Background Tasks:** `schedule` library running via a custom Django management command (dev friendly). For production consider Celery/RQ.
 * **Data Visualization:** `plotly` (rendered via Django views).
 * **Frontend:** Django Templates + Tailwind CSS (via CDN) + minimal vanilla JavaScript for modals/AJAX.
 * **Testing:** `pytest` and `pytest-django`.
@@ -41,7 +41,7 @@ Implement these specific fields in your `models.py`:
 * `description`: TextField(blank=True).
 * `start_time`: DateTimeField.
 * `end_time`: DateTimeField.
-* `category`: CharField(max_length=50, choices=[('Work', 'Work'), ('Health', 'Health'), ('Personal', 'Personal')]).
+* `category`: Either a CharField with choices _or_ a `Category` model FK. NOTE: the current repo uses a `Category` model with a nullable FK on `Event` and migrations converting existing string categories into `Category` rows. Choose one representation and keep migrations in sync.
 * `is_completed`: BooleanField(default=False).
 
 **App: `planner` | Model: `Habit`**
@@ -66,9 +66,9 @@ You will need the following endpoints:
 * `POST /api/habits/<id>/toggle/` -> AJAX endpoint to mark habit complete and increment `current_streak`.
 
 ### 5. AI Integration Specifications
-* **Utility Function:** Create `ai_engine/services.py` with a function `generate_event_tip(event_title, start_time)`.
+* **Utility Function:** `ai_engine/services.py` must provide `generate_event_tip(event_title, start_time)`.
 * **System Prompt:** You MUST use the following system prompt for Gemini: "You are a concise, helpful smart assistant. The user has scheduled an event: {event_title} at {start_time}. Provide a single, highly actionable tip to prepare for this event. Maximum 15 words. Do not use formatting, markdown, or conversational filler."
-* **Trigger Mechanism:** Trigger this utility function in the `save()` method of the `Event` model, or via Django signals, asynchronously if possible, caching the result in the `AITip` model.
+* **Trigger Mechanism:** Trigger this utility function via Django signals (post_save) or in `save()` for new events. The implementation in this repo uses a threaded `post_save` signal handler that runs `generate_event_tip` in a daemon thread and caches results in `AITip`.
 
 ### 6. Background Reminder System
 * Create a custom management command: `planner/management/commands/run_reminders.py`.
@@ -90,5 +90,18 @@ You will need the following endpoints:
 * **Phase 5:** Gemini API Integration & `AITip` caching logic.
 * **Phase 6:** AJAX endpoints for Habits/Events and the Background Reminder Management Command.
 * **Phase 7:** Pytest setup and test writing.
+
+---
+
+Additional recommended features (not in the original brief) to consider adding to the plan before Phase 2:
+- Password reset and email verification flows (important for production).
+- Recurring events support + exception rules.
+- Export/Import (ICS, CSV) for events and habits.
+- Notification channels beyond console (email, webhooks, push) with opt-in toggles.
+- Production background worker recommendation (Celery/RQ + Redis) instead of relying solely on `schedule` for reliability.
+- CI integration (GitHub Actions) with `pytest`, linting (`ruff`/`flake8`), and formatters (`black`, `isort`).
+- Monitoring/error reporting (Sentry) and basic security checklist (HSTS, CSP, secure cookies).
+
+These additions will be applied incrementally as we progress through the phases. The codebase already includes a working threaded AI signal, the `AITip` model, and the reminders command; the plan has been updated here to reflect those decisions and to align stack versions with the repository.
 
 Reply exactly with: "Master architect instructions loaded. I understand the exact models, logic, and stack constraints. Awaiting your command to execute Phase 1."
