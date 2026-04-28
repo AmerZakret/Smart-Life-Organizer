@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Smart Life Organizer – Manage your tasks, habits, and calendar with AI-powered tips from Gemini.">
+    <title>{% block title %}Smart Life Organizer{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+                    },
+                    colors: {
+                        brand: {
+                            50:  '#f0fdfa',
+                            100: '#ccfbf1',
+                            500: '#14b8a6',
+                            600: '#0d9488',
+                            700: '#0f766e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="h-full bg-slate-50 font-sans text-slate-900 antialiased">
+
+{% if user.is_authenticated %}
+<!-- ── Sidebar Layout ── -->
+<div class="flex h-full min-h-screen">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="flex flex-col w-64 shrink-0 bg-slate-900 shadow-xl">
+        <!-- Logo -->
+        <div class="flex items-center gap-3 px-6 py-5 border-b border-slate-700">
+            <div class="flex items-center justify-center w-9 h-9 rounded-xl bg-teal-600">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M11.25 4.533A9.707 9.707 0 006 3a9.735 9.735 0 00-3.25.555.75.75 0 00-.5.707v14.25a.75.75 0 001 .707A8.237 8.237 0 016 18.75c1.995 0 3.823.707 5.25 1.878V4.533zM12.75 20.628A8.244 8.244 0 0118 18.75c.966 0 1.89.166 2.75.47a.75.75 0 001-.708V4.262a.75.75 0 00-.5-.707A9.735 9.735 0 0018 3a9.707 9.707 0 00-5.25 1.533v16.095z"/>
+                </svg>
+            </div>
+            <span class="text-white font-semibold text-sm leading-tight">Smart Life<br><span class="text-teal-400 font-light">Organizer</span></span>
+        </div>
+
+        <!-- Nav links -->
+        <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+            <a href="{% url 'dashboard' %}"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
+                      {% if request.resolver_match.url_name == 'dashboard' %}bg-teal-600 text-white{% else %}text-slate-400 hover:bg-slate-800 hover:text-white{% endif %}">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                </svg>
+                Dashboard
+            </a>
+            <a href="{% url 'calendar' %}"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
+                      {% if request.resolver_match.url_name == 'calendar' %}bg-teal-600 text-white{% else %}text-slate-400 hover:bg-slate-800 hover:text-white{% endif %}">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                Calendar
+            </a>
+            <a href="{% url 'settings' %}"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
+                      {% if request.resolver_match.url_name == 'settings' %}bg-teal-600 text-white{% else %}text-slate-400 hover:bg-slate-800 hover:text-white{% endif %}">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                Settings
+            </a>
+        </nav>
+
+        <!-- User footer -->
+        <div class="px-4 py-4 border-t border-slate-700">
+            <div class="flex items-center gap-3 mb-3">
+                <div class="w-8 h-8 rounded-full bg-teal-600 flex items-center justify-center text-white text-xs font-bold uppercase">
+                    {{ user.username|slice:":1" }}
+                </div>
+                <div class="overflow-hidden">
+                    <p class="text-white text-xs font-medium truncate">{{ user.username }}</p>
+                    <p class="text-slate-500 text-xs truncate">{{ user.email }}</p>
+                </div>
+            </div>
+            <form method="post" action="{% url 'logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white text-xs font-medium transition-colors">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                    </svg>
+                    Sign out
+                </button>
+            </form>
+        </div>
+    </aside>
+
+    <!-- Main content area -->
+    <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <!-- Top bar -->
+        <header class="bg-white border-b border-slate-100 px-8 py-4 flex items-center justify-between shrink-0">
+            <div>
+                <h1 class="text-xl font-semibold text-slate-900">{% block page_title %}{% endblock %}</h1>
+                <p class="text-xs text-slate-500 mt-0.5">{% block page_subtitle %}{% endblock %}</p>
+            </div>
+            <div class="flex items-center gap-2 text-xs text-slate-400">
+                <svg class="w-4 h-4 text-teal-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span id="live-clock"></span>
+            </div>
+        </header>
+
+        <!-- Django messages -->
+        {% if messages %}
+        <div class="px-8 pt-4 space-y-2" id="messages-container">
+            {% for message in messages %}
+            <div class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium shadow-sm border
+                {% if message.tags == 'error' %}bg-red-50 text-red-700 border-red-100
+                {% elif message.tags == 'success' %}bg-teal-50 text-teal-700 border-teal-100
+                {% elif message.tags == 'warning' %}bg-amber-50 text-amber-700 border-amber-100
+                {% else %}bg-blue-50 text-blue-700 border-blue-100{% endif %}">
+                <span class="flex-1">{{ message }}</span>
+                <button onclick="this.parentElement.remove()" class="opacity-50 hover:opacity-100 transition-opacity">✕</button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Page body -->
+        <main class="flex-1 overflow-y-auto px-8 py-6">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</div>
+
+{% else %}
+<!-- Unauthenticated pages just get the full body -->
+{% if messages %}
+<div class="fixed top-4 right-4 z-50 space-y-2">
+    {% for message in messages %}
+    <div class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium shadow-lg border bg-white
+        {% if message.tags == 'error' %}text-red-600 border-red-200
+        {% elif message.tags == 'success' %}text-teal-600 border-teal-200
+        {% else %}text-slate-600 border-slate-200{% endif %}">
+        <span>{{ message }}</span>
+        <button onclick="this.parentElement.remove()" class="opacity-50 hover:opacity-100">✕</button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% block auth_content %}{% endblock %}
+{% endif %}
+
+<script>
+// Live clock
+(function () {
+    const el = document.getElementById('live-clock');
+    if (!el) return;
+    function tick() {
+        el.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    tick();
+    setInterval(tick, 1000);
+})();
+</script>
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>

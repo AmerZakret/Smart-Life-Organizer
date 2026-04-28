@@ -1,0 +1,94 @@
+Act as an Expert Principal Python Developer and Django Architect. Your task is to build a complete, production-ready web application called "Smart Life Organizer", a personal planner app integrating task management with Gemini AI contextual tips.
+
+You must build this strictly step-by-step. Do NOT write the entire codebase in one response. Acknowledge this master prompt, then wait for me to say "Execute Phase [X]" before writing the code for that specific phase.
+
+### 1. Strict Technical Environment & Stack
+* **Language:** Python 3.12.4.
+* **Backend:** Django 5.x.
+* **Database:** SQLite3 (default).
+* **Authentication:** Django's built-in authentication system (local username/email and password registration/login). Do not use any third-party auth services.
+* **AI Provider:** `google-generativeai` library (Gemini 1.5 Flash or Pro model). 
+* **Environment Variables:** `python-dotenv` to manage secure keys in a `.env` file.
+* **Background Tasks:** `schedule` library running via a custom Django management command.
+* **Data Visualization:** `plotly` (rendered via Django views).
+* **Frontend:** Django Templates + Tailwind CSS (via CDN) + minimal vanilla JavaScript for modals/AJAX.
+* **Testing:** `pytest` and `pytest-django`.
+
+### 2. Project Architecture & Directory Structure
+Initialize the Django project with the following structure, ensuring security best practices:
+* `.env` (MUST contain GEMINI_API_KEY and DJANGO_SECRET_KEY. Never hardcode these).
+* `.gitignore` (MUST exclude .env, db.sqlite3, __pycache__/, venv/, etc.).
+* `smartlife_project/` (Main project folder)
+    * `settings.py`, `urls.py`, etc.
+* `users/` (Django app)
+    * Handles local user registration, login views, session management, and UserProfile models.
+* `planner/` (Django app)
+    * Handles Events, Habits, Dashboard, and Calendar views.
+* `ai_engine/` (Django app)
+    * Dedicated app for the Gemini API utility functions and the `AITip` caching model.
+
+### 3. Exact Database Schema (Models)
+Implement these specific fields in your `models.py`:
+
+**App: `users` | Model: `UserProfile`**
+* `user`: OneToOneField to Django's built-in `User` model.
+* `timezone`: CharField (default='UTC').
+* `ai_tone`: CharField (choices: 'motivational', 'direct', 'professional', default='direct').
+
+**App: `planner` | Model: `Event`**
+* `user`: ForeignKey to UserProfile.
+* `title`: CharField(max_length=150).
+* `description`: TextField(blank=True).
+* `start_time`: DateTimeField.
+* `end_time`: DateTimeField.
+* `category`: CharField(max_length=50, choices=[('Work', 'Work'), ('Health', 'Health'), ('Personal', 'Personal')]).
+* `is_completed`: BooleanField(default=False).
+
+**App: `planner` | Model: `Habit`**
+* `user`: ForeignKey to UserProfile.
+* `name`: CharField(max_length=100).
+* `current_streak`: IntegerField(default=0).
+* `last_completed_date`: DateField(null=True, blank=True).
+
+**App: `ai_engine` | Model: `AITip`**
+* `event`: OneToOneField to `Event` (to prevent duplicate API calls).
+* `tip_text`: CharField(max_length=255).
+* `created_at`: DateTimeField(auto_now_add=True).
+* `is_notified`: BooleanField(default=False).
+
+### 4. URL Routing & View Matrix
+You will need the following endpoints:
+* `GET /` -> Landing Page (Local Login and Registration forms).
+* `POST /login/` and `POST /register/` -> Standard Django auth endpoints.
+* `GET /dashboard/` -> Main hub. Renders Today's Events, active AI Tip, and Plotly pie chart context (login required).
+* `GET /calendar/` -> Renders the grid view (login required).
+* `POST /api/events/create/` -> AJAX endpoint to create an event from the calendar modal without reloading the page.
+* `POST /api/habits/<id>/toggle/` -> AJAX endpoint to mark habit complete and increment `current_streak`.
+
+### 5. AI Integration Specifications
+* **Utility Function:** Create `ai_engine/services.py` with a function `generate_event_tip(event_title, start_time)`.
+* **System Prompt:** You MUST use the following system prompt for Gemini: "You are a concise, helpful smart assistant. The user has scheduled an event: {event_title} at {start_time}. Provide a single, highly actionable tip to prepare for this event. Maximum 15 words. Do not use formatting, markdown, or conversational filler."
+* **Trigger Mechanism:** Trigger this utility function in the `save()` method of the `Event` model, or via Django signals, asynchronously if possible, caching the result in the `AITip` model.
+
+### 6. Background Reminder System
+* Create a custom management command: `planner/management/commands/run_reminders.py`.
+* Implement the `schedule` library here to check the database every 1 minute.
+* Query: `Event.objects.filter(start_time__lte=timezone.now() + timedelta(minutes=30), aitip__is_notified=False)`.
+* Action: Print to console (for development) and update `is_notified=True`. (We will tie this to the frontend toast notifications later).
+
+### 7. UI/UX & Tailwind Specifications
+* **Colors:** Use Tailwind's `slate-50` for backgrounds, `slate-900` for primary text, and `teal-600` for primary buttons and accents.
+* **Cards:** All dashboard widgets (Habits, Timeline, AI Toast) must use `bg-white rounded-xl shadow-sm border border-slate-100 p-4`.
+* **Modals:** The Event Creation modal must have a semi-transparent backdrop (`bg-black/50 backdrop-blur-sm`) and appear centered on the screen.
+* **Interactivity:** When a habit is toggled via AJAX, visually update the streak counter instantly using vanilla JS.
+
+### Execution Phases (Acknowledge ONLY, do not execute yet):
+* **Phase 1:** Project Initialization, .env and .gitignore creation, Settings, standard Django Authentication (Login/Register views), and SQLite setup.
+* **Phase 2:** Django Models creation, Migrations, and Django Admin setup.
+* **Phase 3:** Core Views & URLs (Dashboard, Calendar, Settings structure).
+* **Phase 4:** Frontend Templates (Tailwind UI implementation & Plotly charts integration).
+* **Phase 5:** Gemini API Integration & `AITip` caching logic.
+* **Phase 6:** AJAX endpoints for Habits/Events and the Background Reminder Management Command.
+* **Phase 7:** Pytest setup and test writing.
+
+Reply exactly with: "Master architect instructions loaded. I understand the exact models, logic, and stack constraints. Awaiting your command to execute Phase 1."

@@ -1,0 +1,207 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard – Smart Life Organizer{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_subtitle %}Here's your overview for today{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- AI Tip Banner -->
+    {% if active_tip %}
+    <div id="ai-tip-banner" class="flex items-start gap-4 bg-white rounded-xl shadow-sm border border-teal-100 p-4">
+        <div class="shrink-0 flex items-center justify-center w-10 h-10 rounded-xl bg-teal-50 text-teal-600">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+            </svg>
+        </div>
+        <div class="flex-1 min-w-0">
+            <p class="text-xs font-semibold text-teal-700 uppercase tracking-wide mb-0.5">Gemini AI Tip</p>
+            <p class="text-sm text-slate-700 leading-relaxed">{{ active_tip.tip_text }}</p>
+            <p class="text-xs text-slate-400 mt-1">For: <span class="font-medium text-slate-500">{{ active_tip.event.title }}</span></p>
+        </div>
+        <button onclick="document.getElementById('ai-tip-banner').remove()" class="text-slate-300 hover:text-slate-500 transition-colors text-lg leading-none">&times;</button>
+    </div>
+    {% endif %}
+
+    <!-- Top row: Stats -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <!-- Events today -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-4">
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Events Today</p>
+                <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                    <svg class="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                </div>
+            </div>
+            <p class="text-3xl font-bold text-slate-900">{{ events_today.count }}</p>
+            <p class="text-xs text-slate-400 mt-1">scheduled for today</p>
+        </div>
+        <!-- Habits -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-4">
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Active Habits</p>
+                <div class="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
+                    <svg class="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                </div>
+            </div>
+            <p class="text-3xl font-bold text-slate-900">{{ habits.count }}</p>
+            <p class="text-xs text-slate-400 mt-1">habits being tracked</p>
+        </div>
+        <!-- Completed -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-4">
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Completed</p>
+                <div class="w-8 h-8 rounded-lg bg-teal-50 flex items-center justify-center">
+                    <svg class="w-4 h-4 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+            </div>
+            <p class="text-3xl font-bold text-slate-900">{{ events_today|length|default:0 }}</p>
+            <p class="text-xs text-slate-400 mt-1">events done today</p>
+        </div>
+    </div>
+
+    <!-- Middle row: Timeline + Habits -->
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+
+        <!-- Today's Timeline (3/5) -->
+        <div class="lg:col-span-3 bg-white rounded-xl shadow-sm border border-slate-100 p-4">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-sm font-semibold text-slate-800">Today's Timeline</h2>
+                <a href="{% url 'calendar' %}" class="text-xs text-teal-600 hover:underline font-medium">View calendar →</a>
+            </div>
+            <div class="space-y-2">
+                {% for event in events_today %}
+                <div class="flex items-start gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors group">
+                    <!-- Time -->
+                    <div class="shrink-0 text-right w-12">
+                        <p class="text-xs font-semibold text-slate-500">{{ event.start_time|time:"H:i" }}</p>
+                        <p class="text-xs text-slate-300">{{ event.end_time|time:"H:i" }}</p>
+                    </div>
+                    <!-- Color bar -->
+                    <div class="w-1 self-stretch rounded-full shrink-0
+                        {% if event.category == 'Work' %}bg-blue-400
+                        {% elif event.category == 'Health' %}bg-emerald-400
+                        {% else %}bg-purple-400{% endif %}">
+                    </div>
+                    <!-- Content -->
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-slate-800 truncate {{ event.is_completed|yesno:'line-through text-slate-400,' }}">
+                            {{ event.title }}
+                        </p>
+                        <p class="text-xs text-slate-400 mt-0.5">
+                            <span class="inline-flex items-center px-1.5 py-0.5 rounded-md text-xs font-medium
+                                {% if event.category == 'Work' %}bg-blue-50 text-blue-600
+                                {% elif event.category == 'Health' %}bg-emerald-50 text-emerald-600
+                                {% else %}bg-purple-50 text-purple-600{% endif %}">
+                                {{ event.category }}
+                            </span>
+                        </p>
+                    </div>
+                    {% if event.is_completed %}
+                    <svg class="w-4 h-4 text-teal-500 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                    {% endif %}
+                </div>
+                {% empty %}
+                <div class="text-center py-10">
+                    <svg class="w-10 h-10 text-slate-200 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                    <p class="text-sm text-slate-400">No events scheduled for today.</p>
+                    <a href="{% url 'calendar' %}" class="text-xs text-teal-600 hover:underline mt-1 inline-block">Add one on the Calendar →</a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Habit Tracker (2/5) -->
+        <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-100 p-4">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-sm font-semibold text-slate-800">Habits</h2>
+                <span class="text-xs text-slate-400 bg-slate-100 rounded-full px-2 py-0.5">{{ habits.count }} active</span>
+            </div>
+            <div class="space-y-2" id="habits-list">
+                {% for habit in habits %}
+                <div class="flex items-center justify-between p-3 rounded-xl border border-slate-100 hover:border-teal-100 hover:bg-teal-50/30 transition-colors"
+                     id="habit-row-{{ habit.id }}">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <button id="habit-toggle-{{ habit.id }}"
+                            onclick="toggleHabit({{ habit.id }})"
+                            class="w-8 h-8 rounded-lg border-2 border-slate-200 flex items-center justify-center text-white shrink-0 transition-all
+                                   hover:border-teal-500 hover:bg-teal-50"
+                            aria-label="Toggle habit {{ habit.name }}">
+                        </button>
+                        <div class="min-w-0">
+                            <p class="text-sm font-medium text-slate-700 truncate">{{ habit.name }}</p>
+                            <p class="text-xs text-slate-400">Last: {{ habit.last_completed_date|default:"Never" }}</p>
+                        </div>
+                    </div>
+                    <div class="text-right shrink-0 ml-2">
+                        <p class="text-lg font-bold text-slate-900" id="streak-{{ habit.id }}">{{ habit.current_streak }}</p>
+                        <p class="text-xs text-amber-500 font-medium">🔥 streak</p>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-8">
+                    <p class="text-sm text-slate-400">No habits yet.</p>
+                    <p class="text-xs text-slate-300 mt-1">Add habits via the Django Admin.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom row: Plotly Chart -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-4">
+        <h2 class="text-sm font-semibold text-slate-800 mb-4">Today's Events by Category</h2>
+        <div id="chart-container">
+            {{ chart_html|safe }}
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function toggleHabit(habitId) {
+    const csrfToken = '{{ csrf_token }}';
+    fetch(`/api/habits/${habitId}/toggle/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            // Update streak display
+            const streakEl = document.getElementById(`streak-${habitId}`);
+            if (streakEl) streakEl.textContent = data.new_streak;
+
+            // Visual feedback on button
+            const btn = document.getElementById(`habit-toggle-${habitId}`);
+            if (btn) {
+                btn.innerHTML = '<svg class="w-4 h-4 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>';
+                btn.classList.add('bg-teal-50', 'border-teal-500');
+                setTimeout(() => {
+                    btn.innerHTML = '';
+                    btn.classList.remove('bg-teal-50', 'border-teal-500');
+                    btn.classList.add('border-slate-200');
+                }, 1500);
+            }
+        }
+    })
+    .catch(() => {});
+}
+</script>
+{% endblock %}
