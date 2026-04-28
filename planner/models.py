@@ -6,6 +6,7 @@ class Event(models.Model):
         ('Work', 'Work'),
         ('Health', 'Health'),
         ('Personal', 'Personal'),
+        ('Education', 'Education'),
     ]
     user = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
     title = models.CharField(max_length=150)
