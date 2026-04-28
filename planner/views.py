@@ -43,21 +43,33 @@ def dashboard(request):
     ).select_related('event').first()
 
     # Plotly pie chart
-    # category is now a FK to Category; use its name for counts
-    categories = [e.category.name for e in events_today if e.category]
-    if categories:
-        cat_counts = {c: categories.count(c) for c in set(categories)}
+    # Use category explicit colors if available
+    categories_objects = [e.category for e in events_today if e.category]
+    if categories_objects:
+        cat_counts = {}
+        cat_colors = {}
+        for cat in categories_objects:
+            cat_counts[cat.name] = cat_counts.get(cat.name, 0) + 1
+            if cat.color:
+                cat_colors[cat.name] = cat.color
+        
+        # If any category lacks a color or default is needed
+        names = list(cat_counts.keys())
+        values = list(cat_counts.values())
+        
         fig = px.pie(
-            names=list(cat_counts.keys()),
-            values=list(cat_counts.values()),
-            title="Today's Events by Category",
-            color_discrete_sequence=['#0d9488', '#0ea5e9', '#a855f7'],
+            names=names,
+            values=values,
+            color=names,
+            color_discrete_map=cat_colors,
         )
         fig.update_layout(
             margin=dict(l=0, r=0, t=40, b=0),
             paper_bgcolor='rgba(0,0,0,0)',
             font=dict(family='Inter, sans-serif', size=12),
         )
+        # remove duplicate title inside chart (page already shows a section heading)
+        fig.update_layout(title_text='')
         chart_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
     else:
         chart_html = ""
@@ -81,7 +93,9 @@ def calendar(request):
 
     events_qs = Event.objects.filter(user=user_profile).select_related('aitip')
     occurrences = expand_events_for_range(events_qs, now, window_end)
-    context = {'events': occurrences}
+    # provide user's categories to the template for dynamic select
+    categories = Category.objects.filter(user=user_profile).order_by('name')
+    context = {'events': occurrences, 'categories': categories}
     return render(request, 'planner/calendar.html', context)
 
 
@@ -97,6 +111,7 @@ def settings_view(request):
     context = {
         'profile': user_profile,
         'tones': user_profile.TONE_CHOICES,
+        'categories': Category.objects.filter(user=user_profile).order_by('name'),
     }
     return render(request, 'planner/settings.html', context)
 
@@ -141,6 +156,7 @@ def api_create_event(request):
     start_raw  = data.get('start_time', '').strip()
     end_raw    = data.get('end_time', '').strip()
     category   = data.get('category', '').strip()
+    category_color = data.get('category_color') or '#0d9488'
 
     # ── Validation ────────────────────────────────────────────────────────────
     if not title:
@@ -149,8 +165,13 @@ def api_create_event(request):
         return JsonResponse({'success': False, 'error': 'Title must be ≤ 150 characters.'}, status=400)
     if not start_raw or not end_raw:
         return JsonResponse({'success': False, 'error': 'Start and end times are required.'}, status=400)
-    if category not in ('Work', 'Health', 'Personal'):
-        return JsonResponse({'success': False, 'error': 'Invalid category.'}, status=400)
+    # allow arbitrary category names (created on demand) but require non-empty and limit length
+    if not category:
+        return JsonResponse({'success': False, 'error': 'Category is required.'}, status=400)
+    if category == '__new__':
+        return JsonResponse({'success': False, 'error': 'Invalid category selection.'}, status=400)
+    if len(category) > 50:
+        return JsonResponse({'success': False, 'error': 'Category must be ≤ 50 characters.'}, status=400)
 
     # Parse datetime-local strings (HTML format: "YYYY-MM-DDTHH:MM")
     from django.utils.dateparse import parse_datetime
@@ -176,10 +197,10 @@ def api_create_event(request):
     # ── Create ────────────────────────────────────────────────────────────────
     user_profile = request.user.userprofile
     # Ensure category is a Category instance (FK)
-    category_obj, _ = Category.objects.get_or_create(
+    category_obj, created = Category.objects.get_or_create(
         user=user_profile,
         name=category,
-        defaults={'color': '#0d9488'}
+        defaults={'color': category_color}
     )
 
     event = Event.objects.create(
@@ -201,6 +222,8 @@ def api_create_event(request):
         'start_time': event.start_time.isoformat(),
         'end_time':   event.end_time.isoformat(),
         'category':   event.category.name if event.category else None,
+        'category_color': event.category.color if event.category else None,
+        'category_created': created,
     }, status=201)
 
 
@@ -255,6 +278,46 @@ def api_toggle_habit(request, habit_id):
         'last_completed': str(today),
         'already_done':   False,
     })
+
+
+@require_POST
+def api_edit_category(request, cat_id):
+    """Edit a category's name and color."""
+    user_profile = request.user.userprofile
+    try:
+        data = json.loads(request.body)
+        cat = Category.objects.get(pk=cat_id, user=user_profile)
+        
+        name = data.get('name', '').strip()
+        color = data.get('color', '').strip()
+        
+        if name:
+            cat.name = name
+        if color:
+            cat.color = color
+        cat.save()
+        
+        return JsonResponse({'success': True, 'name': cat.name, 'color': cat.color})
+    except Category.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Category not found'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@require_POST
+def api_delete_category(request, cat_id):
+    """Delete a category and explicitly confirm deletion of its events."""
+    user_profile = request.user.userprofile
+    try:
+        cat = Category.objects.get(pk=cat_id, user=user_profile)
+        # We can perform the delete directly. Django CASCADE will delete the associated events if defined.
+        # But we will do it explicitly just to be safe and confirm it.
+        cat.delete()
+        return JsonResponse({'success': True})
+    except Category.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Category not found'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
 
 
 @login_required

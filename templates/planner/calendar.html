@@ -157,10 +157,20 @@
                     class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900
                            focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition">
                     <option value="">Select a category...</option>
-                    <option value="Work">Work</option>
-                    <option value="Health">Health</option>
-                    <option value="Personal">Personal</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat.name|escape }}">{{ cat.name|escape }}</option>
+                    {% endfor %}
                 </select>
+                <div class="mt-2">
+                    <button type="button" id="btn-show-new-category" class="text-xs text-teal-600 hover:underline">+ Add new category</button>
+                </div>
+                <div id="new-category-row" class="mt-2">
+                    <input id="new-category-name" type="text" placeholder="New category name" class="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900" />
+                    <div class="flex items-center gap-2 mt-2">
+                        <label class="text-xs text-slate-500">Color</label>
+                        <input id="new-category-color" type="color" value="#0d9488" />
+                    </div>
+                </div>
             </div>
             <div>
                 <label class="inline-flex items-center gap-2 text-xs text-slate-700">
@@ -189,7 +199,7 @@
                     class="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
                     Cancel
                 </button>
-                <button id="btn-submit-event" type="submit"
+                <button id="btn-submit-event" type="button"
                     class="flex-1 bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold py-2.5 rounded-xl shadow-sm transition-colors">
                     Create Event
                 </button>
@@ -201,6 +211,9 @@
 
 {% block extra_scripts %}
 <script>
+try {
+    console.log('calendar script loaded');
+} catch(e){ /* ignore */ }
 function handleDeleteClick(btn){
     const eventId = btn.getAttribute('data-event-id');
     const isRecurring = btn.getAttribute('data-recurring') === 'true';
@@ -230,19 +243,100 @@ function doDelete(eventId, scope, originalStart){
         else alert(data.error || 'Failed to delete.');
     }).catch(()=>alert('Network error'));
 }
+// Initialize modal controls: repeat toggle, category select, open modal reset, and new-category button
+// These must run on page load so inputs are interactive before submitting.
+// Toggle repeat options visibility
+const repeatCheckboxInit = document.getElementById('event-repeat-weekly');
+if (repeatCheckboxInit){
+    repeatCheckboxInit.addEventListener('change', function(){
+        const opts = document.getElementById('repeat-options');
+        if (this.checked) opts.classList.remove('hidden'); else opts.classList.add('hidden');
+    });
+}
 
-document.getElementById('create-event-form').addEventListener('submit', function(e) {
-    e.preventDefault();
+// show/hide new category inputs when selection changes
+const categorySelectInit = document.getElementById('event-category');
+if (categorySelectInit){
+    categorySelectInit.addEventListener('change', function(){
+        const newRow = document.getElementById('new-category-row');
+        const newName = document.getElementById('new-category-name');
+        if (this.value === '__new__'){
+            newRow.classList.remove('hidden');
+            if (newName){ setTimeout(()=> newName.focus(), 50); }
+        } else {
+            newRow.classList.add('hidden');
+        }
+    });
+}
+
+// When opening the modal, ensure new category inputs are reset/hidden
+const openBtnInit = document.getElementById('btn-open-event-modal');
+if (openBtnInit){
+    openBtnInit.addEventListener('click', function(){
+        const newRow = document.getElementById('new-category-row');
+        const newName = document.getElementById('new-category-name');
+        const newColor = document.getElementById('new-category-color');
+        if (newRow) newRow.classList.add('hidden');
+        if (newName) newName.value = '';
+        if (newColor) newColor.value = '#0d9488';
+        const sel = document.getElementById('event-category');
+        if (sel) sel.value = '';
+        const repeat = document.getElementById('event-repeat-weekly');
+        if (repeat) { repeat.checked = false; const opts = document.getElementById('repeat-options'); if (opts) opts.classList.add('hidden'); }
+    });
+}
+
+// explicit show-new-category button
+const showNewCatBtnInit = document.getElementById('btn-show-new-category');
+if (showNewCatBtnInit){
+    showNewCatBtnInit.addEventListener('click', function(){
+        const sel = document.getElementById('event-category');
+        const newRow = document.getElementById('new-category-row');
+        const newName = document.getElementById('new-category-name');
+        if (sel) sel.value = '__new__';
+        if (newRow) newRow.classList.remove('hidden');
+        if (newName) setTimeout(()=> newName.focus(), 50);
+    });
+}
+
+// Attach submit handler safely and log
+const createForm = document.getElementById('create-event-form');
+if (!createForm){
+    console.error('create-event-form not found in DOM');
+} else {
+    console.log('attaching submit handler to create-event-form');
+    createForm.addEventListener('submit', submitEventHandler);
+}
+
+function submitEventHandler(e){
+    if (e && e.preventDefault) e.preventDefault();
+    try{ console.log('submitEventHandler invoked'); } catch(_){}
 
     const title    = document.getElementById('event-title').value.trim();
     const start    = document.getElementById('event-start').value;
     const end      = document.getElementById('event-end').value;
-    const category = document.getElementById('event-category').value;
+    let category = document.getElementById('event-category').value;
     const desc     = document.getElementById('event-description').value;
     const errBox   = document.getElementById('form-error');
     const submitBtn = document.getElementById('btn-submit-event');
 
     errBox.classList.add('hidden');
+
+    // if user chose to add a new category (or left select blank but filled name), read its name and color
+    let category_color = null;
+    const newNameField = document.getElementById('new-category-name');
+    const newColorField = document.getElementById('new-category-color');
+    const newNameVal = newNameField ? newNameField.value.trim() : '';
+    const newColorVal = newColorField ? newColorField.value || '#0d9488' : '#0d9488';
+    if (category === '__new__' || (!category && newNameVal)){
+        if (!newNameVal){
+            errBox.textContent = 'Please provide a category name.';
+            errBox.classList.remove('hidden');
+            return;
+        }
+        category = newNameVal;
+        category_color = newColorVal;
+    }
 
     if (!title || !start || !end || !category) {
         errBox.textContent = 'Please fill in all required fields.';
@@ -254,15 +348,6 @@ document.getElementById('create-event-form').addEventListener('submit', function
         errBox.classList.remove('hidden');
         return;
     }
-
-// Toggle repeat options visibility
-const repeatCheckbox = document.getElementById('event-repeat-weekly');
-if (repeatCheckbox){
-    repeatCheckbox.addEventListener('change', function(){
-        const opts = document.getElementById('repeat-options');
-        if (this.checked) opts.classList.remove('hidden'); else opts.classList.add('hidden');
-    });
-}
 
     submitBtn.disabled = true;
     submitBtn.textContent = 'Creating…';
@@ -287,10 +372,15 @@ if (repeatCheckbox){
             'X-CSRFToken': csrfToken,
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ title, description: desc, start_time: start, end_time: end, category, rrule: rrule, recurrence_end: recurrence_end }),
+        body: JSON.stringify({ title, description: desc, start_time: start, end_time: end, category, category_color: category_color, rrule: rrule, recurrence_end: recurrence_end }),
     })
-    .then(res => res.json())
-    .then(data => {
+    .then(res => {
+        console.log('create event response status', res.status);
+        return res.json().then(data => ({ status: res.status, body: data }));
+    })
+    .then(({status, body}) => {
+        console.log('create event response body', body);
+        const data = body;
         if (data.success) {
             document.getElementById('event-modal').classList.add('hidden');
             // Append new event to the list
@@ -313,13 +403,29 @@ if (repeatCheckbox){
                 container.prepend(el);
             }
             // Reset form
-            this.reset();
+            try{ if (createForm) createForm.reset(); } catch(e){}
+            // add new category to select if missing
+            try {
+                const sel = document.getElementById('event-category');
+                if (sel){
+                    let exists = false;
+                    for (const opt of sel.options){ if (opt.value === data.category) { exists = true; break; } }
+                    if (!exists){
+                        const opt = document.createElement('option');
+                        opt.value = data.category;
+                        opt.textContent = data.category;
+                        sel.appendChild(opt);
+                    }
+                }
+            } catch (e){}
         } else {
+            console.warn('create event returned failure', data);
             errBox.textContent = data.error || 'Something went wrong.';
             errBox.classList.remove('hidden');
         }
     })
-    .catch(() => {
+    .catch((err) => {
+        console.error('create event fetch error', err);
         errBox.textContent = 'Network error — please try again.';
         errBox.classList.remove('hidden');
     })
@@ -327,6 +433,19 @@ if (repeatCheckbox){
         submitBtn.disabled = false;
         submitBtn.textContent = 'Create Event';
     });
-});
+}
+
+// Bind click handler to Create button (ensures no native form submit occurs)
+const submitBtnEl = document.getElementById('btn-submit-event');
+if (submitBtnEl){
+    submitBtnEl.addEventListener('click', submitEventHandler);
+}
+
+// Also keep form submit as a fallback
+const formEl = document.getElementById('create-event-form');
+if (formEl){
+    formEl.addEventListener('submit', submitEventHandler);
+}
+
 </script>
 {% endblock %}

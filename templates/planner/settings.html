@@ -69,6 +69,32 @@
         </form>
     </div>
 
+    <!-- Category Management -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h2 class="text-sm font-semibold text-slate-800 mb-1">Categories</h2>
+                <p class="text-xs text-slate-400">Manage your event categories here.</p>
+            </div>
+        </div>
+        <div class="space-y-3">
+            {% for cat in categories %}
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50" id="cat-row-{{ cat.pk }}">
+                <div class="flex items-center gap-3">
+                    <input type="color" id="cat-color-{{ cat.pk }}" value="{{ cat.color|default:'#0d9488' }}" class="w-8 h-8 rounded shrink-0 border border-slate-200 cursor-pointer" />
+                    <input type="text" id="cat-name-{{ cat.pk }}" value="{{ cat.name }}" class="px-3 py-1.5 rounded-lg border border-slate-200 text-sm font-medium focus:ring-1 focus:ring-teal-500 w-full sm:w-auto" />
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                    <button type="button" onclick="saveCategory({{ cat.pk }})" class="text-xs font-semibold text-teal-600 hover:text-teal-700 hover:bg-teal-50 px-3 py-1.5 rounded-lg transition-colors">Save</button>
+                    <button type="button" onclick="deleteCategory({{ cat.pk }}, '{{ cat.name|escapejs }}')" class="text-xs font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors">Delete</button>
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-sm text-slate-400 italic text-center py-4">No custom categories yet. Create some from the calendar!</p>
+            {% endfor %}
+        </div>
+    </div>
+
     <!-- Danger zone placeholder -->
     <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
         <h2 class="text-sm font-semibold text-slate-800 mb-1">Account</h2>
@@ -103,5 +129,62 @@ document.querySelectorAll('[name="ai_tone"]').forEach(radio => {
         selected.classList.remove('border-slate-100', 'bg-white');
     });
 });
+
+// Category Management scripts
+const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+function saveCategory(catId) {
+    const nameStr = document.getElementById(`cat-name-${catId}`).value.trim();
+    const colorStr = document.getElementById(`cat-color-${catId}`).value;
+
+    fetch(`/api/categories/${catId}/edit/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({ name: nameStr, color: colorStr })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.success) {
+            alert('Category updated successfully! Changes will naturally reflect across your events.');
+        } else {
+            alert(data.error || 'Could not update category.');
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert('Network error updating category.');
+    });
+}
+
+function deleteCategory(catId, catName) {
+    const confirmation = confirm(`WARNING: Are you sure you want to delete the category "${catName}"?\n\nThis will permanently delete ALL events linked to this category!`);
+    
+    if(!confirmation) return;
+
+    fetch(`/api/categories/${catId}/delete/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.success) {
+            alert('Category and its events have been deleted.');
+            const row = document.getElementById(`cat-row-${catId}`);
+            if(row) row.remove();
+        } else {
+            alert(data.error || 'Could not delete category.');
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert('Network error deleting category.');
+    });
+}
 </script>
 {% endblock %}
