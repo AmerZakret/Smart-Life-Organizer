@@ -169,6 +169,10 @@ def api_create_event(request):
     if end_time <= start_time:
         return JsonResponse({'success': False, 'error': 'End time must be after start time.'}, status=400)
 
+    # Optional recurrence fields
+    rrule_raw = data.get('rrule') or None
+    recurrence_end_raw = data.get('recurrence_end') or None
+
     # ── Create ────────────────────────────────────────────────────────────────
     user_profile = request.user.userprofile
     # Ensure category is a Category instance (FK)
@@ -185,6 +189,8 @@ def api_create_event(request):
         start_time=start_time,
         end_time=end_time,
         category=category_obj,
+        rrule=rrule_raw,
+        recurrence_end=(lambda v: (timezone.make_aware(parse_datetime(v)) if timezone.is_naive(parse_datetime(v)) else parse_datetime(v))) (recurrence_end_raw) if recurrence_end_raw else None,
     )
     logger.info("Event '%s' (id=%s) created for user '%s'.", title, event.pk, request.user.username)
 
@@ -402,3 +408,144 @@ def api_create_habit(request):
         'last_completed_date': str(habit.last_completed_date) if habit.last_completed_date else None,
         'created': created,
     }, status=status)
+
+
+@login_required
+@require_POST
+def api_delete_habit(request, habit_id):
+    user_profile = request.user.userprofile
+    try:
+        habit = Habit.objects.get(pk=habit_id, user=user_profile)
+    except Habit.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Habit not found.'}, status=404)
+
+    habit.delete()
+    logger.info("Habit id=%s deleted by user %s", habit_id, request.user.username)
+    return JsonResponse({'success': True})
+
+
+@login_required
+@require_POST
+def api_delete_event(request, event_id):
+    """Delete an event or a single occurrence of a recurring event.
+
+    POST body JSON:
+      { "scope": "single"|"series", "original_start": "ISO_DATETIME" }
+    """
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        data = {}
+
+    scope = data.get('scope', 'series')
+    original_start_raw = data.get('original_start')
+
+    user_profile = request.user.userprofile
+    try:
+        event = Event.objects.get(pk=event_id, user=user_profile)
+    except Event.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Event not found.'}, status=404)
+
+    # If deleting a single occurrence of a recurring event, create an EventException
+    if event.rrule and scope == 'single':
+        if not original_start_raw:
+            return JsonResponse({'success': False, 'error': 'original_start required for single-occurrence deletion.'}, status=400)
+        from django.utils.dateparse import parse_datetime
+        orig = parse_datetime(original_start_raw)
+        if orig is None:
+            return JsonResponse({'success': False, 'error': 'Invalid original_start datetime.'}, status=400)
+        if timezone.is_naive(orig):
+            orig = timezone.make_aware(orig)
+
+        # create cancellation exception
+        EventException = getattr(__import__('planner.models', fromlist=['EventException']), 'EventException')
+        EventException.objects.get_or_create(event=event, original_start=orig, defaults={'is_cancelled': True})
+        logger.info("Created cancellation for event id=%s occurrence %s by user %s", event_id, orig.isoformat(), request.user.username)
+        return JsonResponse({'success': True, 'deleted_occurrence': True})
+
+    # Otherwise delete the whole event/series
+    event.delete()
+    logger.info("Deleted event id=%s (series) by user %s", event_id, request.user.username)
+    return JsonResponse({'success': True, 'deleted_occurrence': False})
+
+
+@login_required
+@require_POST
+def api_edit_event(request, event_id):
+    """Edit an event or a single occurrence.
+
+    Body: fields same as create plus optional 'scope' and 'original_start'.
+    """
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'Invalid JSON body.'}, status=400)
+
+    scope = data.get('scope', 'series')
+    original_start_raw = data.get('original_start')
+
+    user_profile = request.user.userprofile
+    try:
+        event = Event.objects.get(pk=event_id, user=user_profile)
+    except Event.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Event not found.'}, status=404)
+
+    title = data.get('title')
+    description = data.get('description')
+    start_raw = data.get('start_time')
+    end_raw = data.get('end_time')
+    category_name = data.get('category')
+
+    from django.utils.dateparse import parse_datetime
+
+    # Editing a single occurrence: create or update an EventException override
+    if event.rrule and scope == 'single':
+        if not original_start_raw:
+            return JsonResponse({'success': False, 'error': 'original_start required for single-occurrence edit.'}, status=400)
+        orig = parse_datetime(original_start_raw)
+        if orig is None:
+            return JsonResponse({'success': False, 'error': 'Invalid original_start datetime.'}, status=400)
+        if timezone.is_naive(orig):
+            orig = timezone.make_aware(orig)
+
+        ex_model = getattr(__import__('planner.models', fromlist=['EventException']), 'EventException')
+        ex, created = ex_model.objects.get_or_create(event=event, original_start=orig)
+        if title is not None:
+            ex.override_title = title
+        if description is not None:
+            ex.override_description = description
+        if start_raw:
+            sdt = parse_datetime(start_raw)
+            if timezone.is_naive(sdt):
+                sdt = timezone.make_aware(sdt)
+            ex.override_start_time = sdt
+        if end_raw:
+            edt = parse_datetime(end_raw)
+            if timezone.is_naive(edt):
+                edt = timezone.make_aware(edt)
+            ex.override_end_time = edt
+        ex.is_cancelled = False
+        ex.save()
+        return JsonResponse({'success': True, 'updated_occurrence': True})
+
+    # Series edit — update event fields
+    if title is not None:
+        event.title = title
+    if description is not None:
+        event.description = description
+    if start_raw:
+        sdt = parse_datetime(start_raw)
+        if timezone.is_naive(sdt):
+            sdt = timezone.make_aware(sdt)
+        event.start_time = sdt
+    if end_raw:
+        edt = parse_datetime(end_raw)
+        if timezone.is_naive(edt):
+            edt = timezone.make_aware(edt)
+        event.end_time = edt
+    if category_name is not None:
+        cat_obj, _ = Category.objects.get_or_create(user=user_profile, name=category_name)
+        event.category = cat_obj
+
+    event.save()
+    return JsonResponse({'success': True, 'updated_occurrence': False})

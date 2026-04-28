@@ -156,6 +156,9 @@
                         <p class="text-lg font-bold text-slate-900" id="streak-{{ habit.id }}">{{ habit.current_streak }}</p>
                         <p class="text-xs text-amber-500 font-medium">🔥 streak</p>
                     </div>
+                    <div class="shrink-0 ml-3">
+                        <button onclick="deleteHabit({{ habit.id }})" class="text-xs text-red-500 hover:underline">Delete</button>
+                    </div>
                 </div>
                 {% empty %}
                 <div class="text-center py-8">
@@ -231,7 +234,7 @@ document.getElementById('btn-create-habit').addEventListener('click', function()
         if (data.success) {
             // Prepend new habit to list
             const container = document.getElementById('habits-list');
-            if (container) {
+                if (container) {
                 const el = document.createElement('div');
                 el.id = `habit-row-${data.id}`;
                 el.className = 'flex items-center justify-between p-3 rounded-xl border border-slate-100 hover:border-teal-100 hover:bg-teal-50/30 transition-colors';
@@ -246,6 +249,9 @@ document.getElementById('btn-create-habit').addEventListener('click', function()
                     <div class="text-right shrink-0 ml-2">
                         <p class="text-lg font-bold text-slate-900" id="streak-${data.id}">${data.current_streak}</p>
                         <p class="text-xs text-amber-500 font-medium">🔥 streak</p>
+                    </div>
+                    <div class="shrink-0 ml-3">
+                        <button onclick="deleteHabit(${data.id})" class="text-xs text-red-500 hover:underline">Delete</button>
                     </div>`;
                 container.prepend(el);
                 document.getElementById('habit-name-input').value = '';
@@ -259,5 +265,27 @@ document.getElementById('btn-create-habit').addEventListener('click', function()
         alert('Network error — habit not created.');
     });
 });
+
+function deleteHabit(habitId){
+    if (!confirm('Delete this habit?')) return;
+    const csrfToken = '{{ csrf_token }}';
+    fetch(`/api/habits/${habitId}/delete/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success){
+            const row = document.getElementById(`habit-row-${habitId}`);
+            if (row) row.remove();
+        } else {
+            alert(data.error || 'Could not delete habit.');
+        }
+    })
+    .catch(()=> alert('Network error — could not delete habit.'));
+}
 </script>
 {% endblock %}

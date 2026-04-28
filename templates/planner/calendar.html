@@ -82,6 +82,14 @@
                         <span class="w-7 h-7 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center text-sm">💡</span>
                     </div>
                     {% endif %}
+                    <!-- Delete button -->
+                    <div class="shrink-0">
+                        <button onclick="handleDeleteClick(this)" 
+                            data-event-id="{{ occ.event.pk }}" 
+                            data-recurring="{% if occ.event.rrule %}true{% else %}false{% endif %}"
+                            data-original-start="{% if occ.original_start %}{{ occ.original_start|date:'c' }}{% else %}{% endif %}"
+                            class="text-xs text-red-500 hover:underline">Delete</button>
+                    </div>
                 </div>
                 {% endfor %}
             </div>
@@ -154,6 +162,26 @@
                     <option value="Personal">Personal</option>
                 </select>
             </div>
+            <div>
+                <label class="inline-flex items-center gap-2 text-xs text-slate-700">
+                    <input id="event-repeat-weekly" type="checkbox" class="form-checkbox" />
+                    <span>Repeat weekly</span>
+                </label>
+                <div id="repeat-options" class="mt-2 hidden">
+                    <label for="event-weekday" class="block text-xs text-slate-500 mb-1">Weekday</label>
+                    <select id="event-weekday" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900">
+                        <option value="MO">Monday</option>
+                        <option value="TU">Tuesday</option>
+                        <option value="WE">Wednesday</option>
+                        <option value="TH">Thursday</option>
+                        <option value="FR">Friday</option>
+                        <option value="SA">Saturday</option>
+                        <option value="SU">Sunday</option>
+                    </select>
+                    <label for="event-recurrence-end" class="block text-xs text-slate-500 mt-3">Until (optional)</label>
+                    <input id="event-recurrence-end" type="date" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900 mt-1" />
+                </div>
+            </div>
             <div id="form-error" class="hidden bg-red-50 border border-red-100 text-red-600 text-xs rounded-xl px-4 py-2"></div>
             <div class="flex gap-3 pt-1">
                 <button type="button"
@@ -173,6 +201,36 @@
 
 {% block extra_scripts %}
 <script>
+function handleDeleteClick(btn){
+    const eventId = btn.getAttribute('data-event-id');
+    const isRecurring = btn.getAttribute('data-recurring') === 'true';
+    const original = btn.getAttribute('data-original-start');
+    if (isRecurring){
+        const single = confirm('Delete only this occurrence? Click OK to delete occurrence, Cancel to delete entire series.');
+        if (single){
+            doDelete(eventId, 'single', original);
+            return;
+        }
+        if (!confirm('Delete entire series? This will remove all occurrences.')) return;
+        doDelete(eventId, 'series', null);
+    } else {
+        if (!confirm('Delete this event?')) return;
+        doDelete(eventId, 'series', null);
+    }
+}
+
+function doDelete(eventId, scope, originalStart){
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    fetch(`/api/events/${eventId}/delete/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scope: scope, original_start: originalStart })
+    }).then(r=>r.json()).then(data=>{
+        if (data.success) location.reload();
+        else alert(data.error || 'Failed to delete.');
+    }).catch(()=>alert('Network error'));
+}
+
 document.getElementById('create-event-form').addEventListener('submit', function(e) {
     e.preventDefault();
 
@@ -197,17 +255,39 @@ document.getElementById('create-event-form').addEventListener('submit', function
         return;
     }
 
+// Toggle repeat options visibility
+const repeatCheckbox = document.getElementById('event-repeat-weekly');
+if (repeatCheckbox){
+    repeatCheckbox.addEventListener('change', function(){
+        const opts = document.getElementById('repeat-options');
+        if (this.checked) opts.classList.remove('hidden'); else opts.classList.add('hidden');
+    });
+}
+
     submitBtn.disabled = true;
     submitBtn.textContent = 'Creating…';
 
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    // build optional recurrence
+    let rrule = null;
+    let recurrence_end = null;
+    if (document.getElementById('event-repeat-weekly').checked){
+        const dow = document.getElementById('event-weekday').value;
+        rrule = `FREQ=WEEKLY;BYDAY=${dow}`;
+        const untilDate = document.getElementById('event-recurrence-end').value;
+        if (untilDate){
+            // set recurrence_end to end of day
+            recurrence_end = `${untilDate}T23:59:59`;
+        }
+    }
+
     fetch('/api/events/create/', {
         method: 'POST',
         headers: {
             'X-CSRFToken': csrfToken,
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ title, description: desc, start_time: start, end_time: end, category }),
+        body: JSON.stringify({ title, description: desc, start_time: start, end_time: end, category, rrule: rrule, recurrence_end: recurrence_end }),
     })
     .then(res => res.json())
     .then(data => {
