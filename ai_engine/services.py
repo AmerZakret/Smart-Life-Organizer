@@ -95,11 +95,6 @@ def generate_event_tip(event_title: str, start_time) -> str | None:
     except AttributeError:
         formatted_time = str(start_time)
 
-    prompt = _SYSTEM_PROMPT_TEMPLATE.format(
-        event_title=event_title,
-        start_time=formatted_time,
-    )
-
     try:
         response = _client.models.generate_content(
             model=_MODEL_NAME,

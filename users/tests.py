@@ -13,7 +13,7 @@ def test_user_profile_signal():
 @pytest.mark.django_db
 def test_landing_page_redirect_authenticated(client):
     """Test that landing page redirects to dashboard for authenticated users."""
-    user = User.objects.create_user(username='testuser', password='password123')
+    User.objects.create_user(username='testuser', password='password123')
     client.login(username='testuser', password='password123')
     response = client.get('/')
     assert response.status_code == 302

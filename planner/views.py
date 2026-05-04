@@ -1,23 +1,19 @@
+import csv
 import json
 import logging
 from datetime import timedelta
 
 import plotly.express as px
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
+from icalendar import Calendar, Event as IcsEvent
 
 from ai_engine.models import AITip
-from .models import Event, Habit, Category
+from .models import Category, Event, Habit
 from .utils import expand_events_for_range
-import csv
-from django.http import HttpResponse
-from icalendar import Calendar, Event as IcsEvent
-from django.views.decorators.http import require_GET, require_POST
-from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 

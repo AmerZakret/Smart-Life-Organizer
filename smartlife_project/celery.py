@@ -8,8 +8,6 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()
 
 # Default beat schedule: call planner.reminders every 60 seconds
-from celery.schedules import crontab
-
 app.conf.beat_schedule = {
     'send-reminders-every-minute': {
         'task': 'planner.tasks.send_reminders',

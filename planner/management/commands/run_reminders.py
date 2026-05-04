@@ -26,11 +26,9 @@ changing any other part of the codebase.
 Run with Ctrl-C to stop.
 """
 
-import time
 import logging
 from datetime import timedelta
 
-import schedule
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
