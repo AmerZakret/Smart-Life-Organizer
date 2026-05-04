@@ -1,6 +1,7 @@
 from django.db import models
 from planner.models import Event
 
+
 class AITip(models.Model):
     event = models.OneToOneField(Event, on_delete=models.CASCADE)
     tip_text = models.CharField(max_length=255)

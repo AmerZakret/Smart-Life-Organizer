@@ -47,22 +47,24 @@ def _check_reminders() -> None:
     from ai_engine.models import AITip
 
     window_start = timezone.now()
-    window_end   = window_start + timedelta(minutes=30)
+    window_end = window_start + timedelta(minutes=30)
 
     # Spec query: events starting within 30 min with un-notified AITip
     upcoming = Event.objects.filter(
         start_time__gte=window_start,
         start_time__lte=window_end,
         aitip__is_notified=False,
-    ).select_related('aitip', 'user__user')
+    ).select_related("aitip", "user__user")
 
     if not upcoming.exists():
-        logger.debug("[Reminders] No upcoming reminders at %s.", window_start.strftime('%H:%M'))
+        logger.debug(
+            "[Reminders] No upcoming reminders at %s.", window_start.strftime("%H:%M")
+        )
         return
 
     for event in upcoming:
         minutes_away = int((event.start_time - window_start).total_seconds() / 60)
-        tip_text = event.aitip.tip_text if hasattr(event, 'aitip') else "Be prepared!"
+        tip_text = event.aitip.tip_text if hasattr(event, "aitip") else "Be prepared!"
 
         # ── Console notification (dev) ─────────────────────────────────────
         reminder_line = (
@@ -90,14 +92,14 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
-            '--interval',
+            "--interval",
             type=int,
             default=60,
-            help='Polling interval in seconds (default: 60).',
+            help="Polling interval in seconds (default: 60).",
         )
 
     def handle(self, *args, **options):
-        interval = options['interval']
+        interval = options["interval"]
 
         self.stdout.write(
             self.style.SUCCESS(
@@ -110,8 +112,10 @@ class Command(BaseCommand):
 
         # The management command remains for local use, but when Celery is
         # configured we recommend running the Celery beat scheduler instead.
-        self.stdout.write(self.style.WARNING(
-            "\nReminder service (legacy) — use Celery beat for production.\n"
-        ))
+        self.stdout.write(
+            self.style.WARNING(
+                "\nReminder service (legacy) — use Celery beat for production.\n"
+            )
+        )
         # Run a single check on demand
         _check_reminders()

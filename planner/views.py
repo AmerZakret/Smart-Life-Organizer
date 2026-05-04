@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 # ── Page views ────────────────────────────────────────────────────────────────
 
+
 @login_required
 def dashboard(request):
     user_profile = request.user.userprofile
@@ -28,15 +29,19 @@ def dashboard(request):
     events_today = Event.objects.filter(
         user=user_profile,
         start_time__date=today,
-    ).order_by('start_time')
+    ).order_by("start_time")
 
     habits = Habit.objects.filter(user=user_profile)
 
-    active_tip = AITip.objects.filter(
-        event__user=user_profile,
-        event__start_time__gte=timezone.now(),
-        is_notified=False,
-    ).select_related('event').first()
+    active_tip = (
+        AITip.objects.filter(
+            event__user=user_profile,
+            event__start_time__gte=timezone.now(),
+            is_notified=False,
+        )
+        .select_related("event")
+        .first()
+    )
 
     # Plotly pie chart
     # Use category explicit colors if available
@@ -48,11 +53,11 @@ def dashboard(request):
             cat_counts[cat.name] = cat_counts.get(cat.name, 0) + 1
             if cat.color:
                 cat_colors[cat.name] = cat.color
-        
+
         # If any category lacks a color or default is needed
         names = list(cat_counts.keys())
         values = list(cat_counts.values())
-        
+
         fig = px.pie(
             names=names,
             values=values,
@@ -61,22 +66,22 @@ def dashboard(request):
         )
         fig.update_layout(
             margin=dict(l=0, r=0, t=40, b=0),
-            paper_bgcolor='rgba(0,0,0,0)',
-            font=dict(family='Inter, sans-serif', size=12),
+            paper_bgcolor="rgba(0,0,0,0)",
+            font=dict(family="Inter, sans-serif", size=12),
         )
         # remove duplicate title inside chart (page already shows a section heading)
-        fig.update_layout(title_text='')
-        chart_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
+        fig.update_layout(title_text="")
+        chart_html = fig.to_html(full_html=False, include_plotlyjs="cdn")
     else:
         chart_html = ""
 
     context = {
-        'events_today': events_today,
-        'habits': habits,
-        'active_tip': active_tip,
-        'chart_html': chart_html,
+        "events_today": events_today,
+        "habits": habits,
+        "active_tip": active_tip,
+        "chart_html": chart_html,
     }
-    return render(request, 'planner/dashboard.html', context)
+    return render(request, "planner/dashboard.html", context)
 
 
 @login_required
@@ -85,55 +90,57 @@ def calendar(request):
     # Show events for the next 30 days (expand recurring events)
     from django.utils import timezone
     from collections import OrderedDict
+
     now = timezone.now()
     window_end = now + timezone.timedelta(days=30)
 
-    events_qs = Event.objects.filter(user=user_profile).select_related('aitip')
+    events_qs = Event.objects.filter(user=user_profile).select_related("aitip")
     occurrences = expand_events_for_range(events_qs, now, window_end)
 
     # Group occurrences by date for vertical day-by-day layout
     days_dict = OrderedDict()
     for occ in occurrences:
-        day = occ['start_time'].date()
+        day = occ["start_time"].date()
         if day not in days_dict:
             days_dict[day] = []
         days_dict[day].append(occ)
 
-    days_grouped = [{'date': day, 'events': evts} for day, evts in days_dict.items()]
+    days_grouped = [{"date": day, "events": evts} for day, evts in days_dict.items()]
 
     today = now.date()
     tomorrow = today + timedelta(days=1)
 
     # provide user's categories to the template for dynamic select
-    categories = Category.objects.filter(user=user_profile).order_by('name')
+    categories = Category.objects.filter(user=user_profile).order_by("name")
     context = {
-        'events': occurrences,
-        'days_grouped': days_grouped,
-        'today': today,
-        'tomorrow': tomorrow,
-        'categories': categories,
+        "events": occurrences,
+        "days_grouped": days_grouped,
+        "today": today,
+        "tomorrow": tomorrow,
+        "categories": categories,
     }
-    return render(request, 'planner/calendar.html', context)
+    return render(request, "planner/calendar.html", context)
 
 
 @login_required
 def settings_view(request):
     user_profile = request.user.userprofile
-    if request.method == 'POST':
-        user_profile.timezone = request.POST.get('timezone', 'UTC')
-        user_profile.ai_tone = request.POST.get('ai_tone', 'direct')
+    if request.method == "POST":
+        user_profile.timezone = request.POST.get("timezone", "UTC")
+        user_profile.ai_tone = request.POST.get("ai_tone", "direct")
         user_profile.save()
-        return redirect('dashboard')
+        return redirect("dashboard")
 
     context = {
-        'profile': user_profile,
-        'tones': user_profile.TONE_CHOICES,
-        'categories': Category.objects.filter(user=user_profile).order_by('name'),
+        "profile": user_profile,
+        "tones": user_profile.TONE_CHOICES,
+        "categories": Category.objects.filter(user=user_profile).order_by("name"),
     }
-    return render(request, 'planner/settings.html', context)
+    return render(request, "planner/settings.html", context)
 
 
 # ── AJAX API endpoints ────────────────────────────────────────────────────────
+
 
 @login_required
 @require_POST
@@ -166,37 +173,54 @@ def api_create_event(request):
     try:
         data = json.loads(request.body)
     except (json.JSONDecodeError, ValueError):
-        return JsonResponse({'success': False, 'error': 'Invalid JSON body.'}, status=400)
+        return JsonResponse(
+            {"success": False, "error": "Invalid JSON body."}, status=400
+        )
 
-    title      = data.get('title', '').strip()
-    description = data.get('description', '').strip()
-    start_raw  = data.get('start_time', '').strip()
-    end_raw    = data.get('end_time', '').strip()
-    category   = data.get('category', '').strip()
-    category_color = data.get('category_color') or '#0d9488'
+    title = data.get("title", "").strip()
+    description = data.get("description", "").strip()
+    start_raw = data.get("start_time", "").strip()
+    end_raw = data.get("end_time", "").strip()
+    category = data.get("category", "").strip()
+    category_color = data.get("category_color") or "#0d9488"
 
     # ── Validation ────────────────────────────────────────────────────────────
     if not title:
-        return JsonResponse({'success': False, 'error': 'Title is required.'}, status=400)
+        return JsonResponse(
+            {"success": False, "error": "Title is required."}, status=400
+        )
     if len(title) > 150:
-        return JsonResponse({'success': False, 'error': 'Title must be ≤ 150 characters.'}, status=400)
+        return JsonResponse(
+            {"success": False, "error": "Title must be ≤ 150 characters."}, status=400
+        )
     if not start_raw or not end_raw:
-        return JsonResponse({'success': False, 'error': 'Start and end times are required.'}, status=400)
+        return JsonResponse(
+            {"success": False, "error": "Start and end times are required."}, status=400
+        )
     # allow arbitrary category names (created on demand) but require non-empty and limit length
     if not category:
-        return JsonResponse({'success': False, 'error': 'Category is required.'}, status=400)
-    if category == '__new__':
-        return JsonResponse({'success': False, 'error': 'Invalid category selection.'}, status=400)
+        return JsonResponse(
+            {"success": False, "error": "Category is required."}, status=400
+        )
+    if category == "__new__":
+        return JsonResponse(
+            {"success": False, "error": "Invalid category selection."}, status=400
+        )
     if len(category) > 50:
-        return JsonResponse({'success': False, 'error': 'Category must be ≤ 50 characters.'}, status=400)
+        return JsonResponse(
+            {"success": False, "error": "Category must be ≤ 50 characters."}, status=400
+        )
 
     # Parse datetime-local strings (HTML format: "YYYY-MM-DDTHH:MM")
     from django.utils.dateparse import parse_datetime
+
     start_time = parse_datetime(start_raw)
-    end_time   = parse_datetime(end_raw)
+    end_time = parse_datetime(end_raw)
 
     if start_time is None or end_time is None:
-        return JsonResponse({'success': False, 'error': 'Invalid datetime format.'}, status=400)
+        return JsonResponse(
+            {"success": False, "error": "Invalid datetime format."}, status=400
+        )
 
     # Make datetimes timezone-aware using Django's current timezone
     if timezone.is_naive(start_time):
@@ -205,19 +229,20 @@ def api_create_event(request):
         end_time = timezone.make_aware(end_time)
 
     if end_time <= start_time:
-        return JsonResponse({'success': False, 'error': 'End time must be after start time.'}, status=400)
+        return JsonResponse(
+            {"success": False, "error": "End time must be after start time."},
+            status=400,
+        )
 
     # Optional recurrence fields
-    rrule_raw = data.get('rrule') or None
-    recurrence_end_raw = data.get('recurrence_end') or None
+    rrule_raw = data.get("rrule") or None
+    recurrence_end_raw = data.get("recurrence_end") or None
 
     # ── Create ────────────────────────────────────────────────────────────────
     user_profile = request.user.userprofile
     # Ensure category is a Category instance (FK)
     category_obj, created = Category.objects.get_or_create(
-        user=user_profile,
-        name=category,
-        defaults={'color': category_color}
+        user=user_profile, name=category, defaults={"color": category_color}
     )
 
     event = Event.objects.create(
@@ -228,20 +253,38 @@ def api_create_event(request):
         end_time=end_time,
         category=category_obj,
         rrule=rrule_raw,
-        recurrence_end=(lambda v: (timezone.make_aware(parse_datetime(v)) if timezone.is_naive(parse_datetime(v)) else parse_datetime(v))) (recurrence_end_raw) if recurrence_end_raw else None,
+        recurrence_end=(
+            (
+                lambda v: (
+                    timezone.make_aware(parse_datetime(v))
+                    if timezone.is_naive(parse_datetime(v))
+                    else parse_datetime(v)
+                )
+            )(recurrence_end_raw)
+            if recurrence_end_raw
+            else None
+        ),
     )
-    logger.info("Event '%s' (id=%s) created for user '%s'.", title, event.pk, request.user.username)
+    logger.info(
+        "Event '%s' (id=%s) created for user '%s'.",
+        title,
+        event.pk,
+        request.user.username,
+    )
 
-    return JsonResponse({
-        'success':    True,
-        'id':         event.pk,
-        'title':      event.title,
-        'start_time': event.start_time.isoformat(),
-        'end_time':   event.end_time.isoformat(),
-        'category':   event.category.name if event.category else None,
-        'category_color': event.category.color if event.category else None,
-        'category_created': created,
-    }, status=201)
+    return JsonResponse(
+        {
+            "success": True,
+            "id": event.pk,
+            "title": event.title,
+            "start_time": event.start_time.isoformat(),
+            "end_time": event.end_time.isoformat(),
+            "category": event.category.name if event.category else None,
+            "category_color": event.category.color if event.category else None,
+            "category_created": created,
+        },
+        status=201,
+    )
 
 
 @login_required
@@ -267,34 +310,41 @@ def api_toggle_habit(request, habit_id):
     try:
         habit = Habit.objects.get(pk=habit_id, user=user_profile)
     except Habit.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Habit not found.'}, status=404)
+        return JsonResponse({"success": False, "error": "Habit not found."}, status=404)
 
     today = timezone.now().date()
 
     # Idempotency: don't increment if already toggled today
     if habit.last_completed_date == today:
-        return JsonResponse({
-            'success':        True,
-            'new_streak':     habit.current_streak,
-            'last_completed': str(today),
-            'already_done':   True,
-        })
+        return JsonResponse(
+            {
+                "success": True,
+                "new_streak": habit.current_streak,
+                "last_completed": str(today),
+                "already_done": True,
+            }
+        )
 
-    habit.current_streak      += 1
-    habit.last_completed_date  = today
-    habit.save(update_fields=['current_streak', 'last_completed_date'])
+    habit.current_streak += 1
+    habit.last_completed_date = today
+    habit.save(update_fields=["current_streak", "last_completed_date"])
 
     logger.info(
         "Habit '%s' (id=%s) toggled for user '%s'. New streak: %s.",
-        habit.name, habit.pk, request.user.username, habit.current_streak,
+        habit.name,
+        habit.pk,
+        request.user.username,
+        habit.current_streak,
     )
 
-    return JsonResponse({
-        'success':        True,
-        'new_streak':     habit.current_streak,
-        'last_completed': str(today),
-        'already_done':   False,
-    })
+    return JsonResponse(
+        {
+            "success": True,
+            "new_streak": habit.current_streak,
+            "last_completed": str(today),
+            "already_done": False,
+        }
+    )
 
 
 @require_POST
@@ -304,21 +354,21 @@ def api_edit_category(request, cat_id):
     try:
         data = json.loads(request.body)
         cat = Category.objects.get(pk=cat_id, user=user_profile)
-        
-        name = data.get('name', '').strip()
-        color = data.get('color', '').strip()
-        
+
+        name = data.get("name", "").strip()
+        color = data.get("color", "").strip()
+
         if name:
             cat.name = name
         if color:
             cat.color = color
         cat.save()
-        
-        return JsonResponse({'success': True, 'name': cat.name, 'color': cat.color})
+
+        return JsonResponse({"success": True, "name": cat.name, "color": cat.color})
     except Category.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Category not found'})
+        return JsonResponse({"success": False, "error": "Category not found"})
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})
+        return JsonResponse({"success": False, "error": str(e)})
 
 
 @require_POST
@@ -330,11 +380,11 @@ def api_delete_category(request, cat_id):
         # We can perform the delete directly. Django CASCADE will delete the associated events if defined.
         # But we will do it explicitly just to be safe and confirm it.
         cat.delete()
-        return JsonResponse({'success': True})
+        return JsonResponse({"success": True})
     except Category.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Category not found'})
+        return JsonResponse({"success": False, "error": "Category not found"})
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})
+        return JsonResponse({"success": False, "error": str(e)})
 
 
 @login_required
@@ -344,20 +394,31 @@ def export_csv(request):
     user_profile = request.user.userprofile
 
     # Events
-    events = Event.objects.filter(user=user_profile).order_by('start_time')
+    events = Event.objects.filter(user=user_profile).order_by("start_time")
 
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = 'attachment; filename="smartlife_export.csv"'
+    response = HttpResponse(content_type="text/csv")
+    response["Content-Disposition"] = 'attachment; filename="smartlife_export.csv"'
 
     writer = csv.writer(response)
-    writer.writerow(['type', 'title', 'start_time', 'end_time', 'category', 'description'])
+    writer.writerow(
+        ["type", "title", "start_time", "end_time", "category", "description"]
+    )
     for e in events:
-        writer.writerow(['event', e.title, e.start_time.isoformat(), e.end_time.isoformat(), e.category.name if e.category else '', e.description])
+        writer.writerow(
+            [
+                "event",
+                e.title,
+                e.start_time.isoformat(),
+                e.end_time.isoformat(),
+                e.category.name if e.category else "",
+                e.description,
+            ]
+        )
 
     # Habits
     habits = Habit.objects.filter(user=user_profile)
     for h in habits:
-        writer.writerow(['habit', h.name, '', '', '', ''])
+        writer.writerow(["habit", h.name, "", "", "", ""])
 
     return response
 
@@ -370,26 +431,26 @@ def export_ics(request):
     events = Event.objects.filter(user=user_profile)
 
     cal = Calendar()
-    cal.add('prodid', '-//Smart Life Organizer//')
-    cal.add('version', '2.0')
+    cal.add("prodid", "-//Smart Life Organizer//")
+    cal.add("version", "2.0")
 
     for e in events:
         comp = IcsEvent()
-        comp.add('summary', e.title)
-        comp.add('dtstart', e.start_time)
-        comp.add('dtend', e.end_time)
+        comp.add("summary", e.title)
+        comp.add("dtstart", e.start_time)
+        comp.add("dtend", e.end_time)
         if e.rrule:
             # naive: set raw RRULE string (icalendar expects dict-like vRecur)
-            for part in e.rrule.split(';'):
+            for part in e.rrule.split(";"):
                 if not part:
                     continue
-                k, v = part.split('=')
-                comp.add('rrule', {k: v})
-        comp.add('description', e.description or '')
+                k, v = part.split("=")
+                comp.add("rrule", {k: v})
+        comp.add("description", e.description or "")
         cal.add_component(comp)
 
-    response = HttpResponse(cal.to_ical(), content_type='text/calendar')
-    response['Content-Disposition'] = 'attachment; filename="smartlife_events.ics"'
+    response = HttpResponse(cal.to_ical(), content_type="text/calendar")
+    response["Content-Disposition"] = 'attachment; filename="smartlife_events.ics"'
     return response
 
 
@@ -397,20 +458,22 @@ def export_ics(request):
 def import_events(request):
     """Simple upload handler to import CSV or ICS files."""
     user_profile = request.user.userprofile
-    if request.method == 'POST':
-        f = request.FILES.get('file')
+    if request.method == "POST":
+        f = request.FILES.get("file")
         if not f:
-            return JsonResponse({'success': False, 'error': 'No file uploaded.'}, status=400)
+            return JsonResponse(
+                {"success": False, "error": "No file uploaded."}, status=400
+            )
 
         name = f.name.lower()
         created = 0
-        if name.endswith('.csv'):
-            text = f.read().decode('utf-8')
+        if name.endswith(".csv"):
+            text = f.read().decode("utf-8")
             reader = csv.reader(text.splitlines())
             for row in reader:
                 if not row:
                     continue
-                if row[0].lower() == 'event' and len(row) >= 6:
+                if row[0].lower() == "event" and len(row) >= 6:
                     title = row[1]
                     try:
                         start = timezone.datetime.fromisoformat(row[2])
@@ -420,41 +483,64 @@ def import_events(request):
                     cat_name = row[4]
                     cat = None
                     if cat_name:
-                        cat, _ = Category.objects.get_or_create(user=user_profile, name=cat_name)
-                    Event.objects.create(user=user_profile, title=title, start_time=start, end_time=end, category=cat, description=row[5])
+                        cat, _ = Category.objects.get_or_create(
+                            user=user_profile, name=cat_name
+                        )
+                    Event.objects.create(
+                        user=user_profile,
+                        title=title,
+                        start_time=start,
+                        end_time=end,
+                        category=cat,
+                        description=row[5],
+                    )
                     created += 1
-                elif row[0].lower() == 'habit' and len(row) >= 2:
+                elif row[0].lower() == "habit" and len(row) >= 2:
                     Habit.objects.get_or_create(user=user_profile, name=row[1])
                     created += 1
 
-        elif name.endswith('.ics'):
+        elif name.endswith(".ics"):
             data = f.read()
             try:
                 cal = Calendar.from_ical(data)
             except Exception:
-                return JsonResponse({'success': False, 'error': 'Invalid ICS file.'}, status=400)
+                return JsonResponse(
+                    {"success": False, "error": "Invalid ICS file."}, status=400
+                )
             for component in cal.walk():
-                if component.name == 'VEVENT':
-                    title = str(component.get('summary'))
-                    dtstart = component.get('dtstart').dt
-                    dtend = component.get('dtend').dt if component.get('dtend') else (dtstart + timezone.timedelta(hours=1))
-                    rrule = component.get('rrule')
+                if component.name == "VEVENT":
+                    title = str(component.get("summary"))
+                    dtstart = component.get("dtstart").dt
+                    dtend = (
+                        component.get("dtend").dt
+                        if component.get("dtend")
+                        else (dtstart + timezone.timedelta(hours=1))
+                    )
+                    rrule = component.get("rrule")
                     rrule_str = None
                     if rrule:
                         # Convert vRecur dict to RFC string
                         parts = []
                         for k, v in rrule.items():
                             parts.append(f"{k}={','.join(v)}")
-                        rrule_str = ';'.join(parts)
-                    Event.objects.create(user=user_profile, title=title, start_time=dtstart, end_time=dtend, rrule=rrule_str)
+                        rrule_str = ";".join(parts)
+                    Event.objects.create(
+                        user=user_profile,
+                        title=title,
+                        start_time=dtstart,
+                        end_time=dtend,
+                        rrule=rrule_str,
+                    )
                     created += 1
         else:
-            return JsonResponse({'success': False, 'error': 'Unsupported file type.'}, status=400)
+            return JsonResponse(
+                {"success": False, "error": "Unsupported file type."}, status=400
+            )
 
-        return JsonResponse({'success': True, 'created': created})
+        return JsonResponse({"success": True, "created": created})
 
     # GET -> render a simple upload form
-    return render(request, 'planner/import_form.html')
+    return render(request, "planner/import_form.html")
 
 
 @login_required
@@ -468,26 +554,37 @@ def api_create_habit(request):
     try:
         data = json.loads(request.body)
     except (json.JSONDecodeError, ValueError):
-        return JsonResponse({'success': False, 'error': 'Invalid JSON body.'}, status=400)
+        return JsonResponse(
+            {"success": False, "error": "Invalid JSON body."}, status=400
+        )
 
-    name = (data.get('name') or '').strip()
+    name = (data.get("name") or "").strip()
     if not name:
-        return JsonResponse({'success': False, 'error': 'Name is required.'}, status=400)
+        return JsonResponse(
+            {"success": False, "error": "Name is required."}, status=400
+        )
     if len(name) > 100:
-        return JsonResponse({'success': False, 'error': 'Name must be ≤ 100 characters.'}, status=400)
+        return JsonResponse(
+            {"success": False, "error": "Name must be ≤ 100 characters."}, status=400
+        )
 
     user_profile = request.user.userprofile
     habit, created = Habit.objects.get_or_create(user=user_profile, name=name)
 
     status = 201 if created else 200
-    return JsonResponse({
-        'success': True,
-        'id': habit.pk,
-        'name': habit.name,
-        'current_streak': habit.current_streak,
-        'last_completed_date': str(habit.last_completed_date) if habit.last_completed_date else None,
-        'created': created,
-    }, status=status)
+    return JsonResponse(
+        {
+            "success": True,
+            "id": habit.pk,
+            "name": habit.name,
+            "current_streak": habit.current_streak,
+            "last_completed_date": (
+                str(habit.last_completed_date) if habit.last_completed_date else None
+            ),
+            "created": created,
+        },
+        status=status,
+    )
 
 
 @login_required
@@ -497,11 +594,11 @@ def api_delete_habit(request, habit_id):
     try:
         habit = Habit.objects.get(pk=habit_id, user=user_profile)
     except Habit.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Habit not found.'}, status=404)
+        return JsonResponse({"success": False, "error": "Habit not found."}, status=404)
 
     habit.delete()
     logger.info("Habit id=%s deleted by user %s", habit_id, request.user.username)
-    return JsonResponse({'success': True})
+    return JsonResponse({"success": True})
 
 
 @login_required
@@ -517,36 +614,57 @@ def api_delete_event(request, event_id):
     except (json.JSONDecodeError, ValueError):
         data = {}
 
-    scope = data.get('scope', 'series')
-    original_start_raw = data.get('original_start')
+    scope = data.get("scope", "series")
+    original_start_raw = data.get("original_start")
 
     user_profile = request.user.userprofile
     try:
         event = Event.objects.get(pk=event_id, user=user_profile)
     except Event.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Event not found.'}, status=404)
+        return JsonResponse({"success": False, "error": "Event not found."}, status=404)
 
     # If deleting a single occurrence of a recurring event, create an EventException
-    if event.rrule and scope == 'single':
+    if event.rrule and scope == "single":
         if not original_start_raw:
-            return JsonResponse({'success': False, 'error': 'original_start required for single-occurrence deletion.'}, status=400)
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": "original_start required for single-occurrence deletion.",
+                },
+                status=400,
+            )
         from django.utils.dateparse import parse_datetime
+
         orig = parse_datetime(original_start_raw)
         if orig is None:
-            return JsonResponse({'success': False, 'error': 'Invalid original_start datetime.'}, status=400)
+            return JsonResponse(
+                {"success": False, "error": "Invalid original_start datetime."},
+                status=400,
+            )
         if timezone.is_naive(orig):
             orig = timezone.make_aware(orig)
 
         # create cancellation exception
-        EventException = getattr(__import__('planner.models', fromlist=['EventException']), 'EventException')
-        EventException.objects.get_or_create(event=event, original_start=orig, defaults={'is_cancelled': True})
-        logger.info("Created cancellation for event id=%s occurrence %s by user %s", event_id, orig.isoformat(), request.user.username)
-        return JsonResponse({'success': True, 'deleted_occurrence': True})
+        EventException = getattr(
+            __import__("planner.models", fromlist=["EventException"]), "EventException"
+        )
+        EventException.objects.get_or_create(
+            event=event, original_start=orig, defaults={"is_cancelled": True}
+        )
+        logger.info(
+            "Created cancellation for event id=%s occurrence %s by user %s",
+            event_id,
+            orig.isoformat(),
+            request.user.username,
+        )
+        return JsonResponse({"success": True, "deleted_occurrence": True})
 
     # Otherwise delete the whole event/series
     event.delete()
-    logger.info("Deleted event id=%s (series) by user %s", event_id, request.user.username)
-    return JsonResponse({'success': True, 'deleted_occurrence': False})
+    logger.info(
+        "Deleted event id=%s (series) by user %s", event_id, request.user.username
+    )
+    return JsonResponse({"success": True, "deleted_occurrence": False})
 
 
 @login_required
@@ -559,36 +677,49 @@ def api_edit_event(request, event_id):
     try:
         data = json.loads(request.body)
     except (json.JSONDecodeError, ValueError):
-        return JsonResponse({'success': False, 'error': 'Invalid JSON body.'}, status=400)
+        return JsonResponse(
+            {"success": False, "error": "Invalid JSON body."}, status=400
+        )
 
-    scope = data.get('scope', 'series')
-    original_start_raw = data.get('original_start')
+    scope = data.get("scope", "series")
+    original_start_raw = data.get("original_start")
 
     user_profile = request.user.userprofile
     try:
         event = Event.objects.get(pk=event_id, user=user_profile)
     except Event.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Event not found.'}, status=404)
+        return JsonResponse({"success": False, "error": "Event not found."}, status=404)
 
-    title = data.get('title')
-    description = data.get('description')
-    start_raw = data.get('start_time')
-    end_raw = data.get('end_time')
-    category_name = data.get('category')
+    title = data.get("title")
+    description = data.get("description")
+    start_raw = data.get("start_time")
+    end_raw = data.get("end_time")
+    category_name = data.get("category")
 
     from django.utils.dateparse import parse_datetime
 
     # Editing a single occurrence: create or update an EventException override
-    if event.rrule and scope == 'single':
+    if event.rrule and scope == "single":
         if not original_start_raw:
-            return JsonResponse({'success': False, 'error': 'original_start required for single-occurrence edit.'}, status=400)
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": "original_start required for single-occurrence edit.",
+                },
+                status=400,
+            )
         orig = parse_datetime(original_start_raw)
         if orig is None:
-            return JsonResponse({'success': False, 'error': 'Invalid original_start datetime.'}, status=400)
+            return JsonResponse(
+                {"success": False, "error": "Invalid original_start datetime."},
+                status=400,
+            )
         if timezone.is_naive(orig):
             orig = timezone.make_aware(orig)
 
-        ex_model = getattr(__import__('planner.models', fromlist=['EventException']), 'EventException')
+        ex_model = getattr(
+            __import__("planner.models", fromlist=["EventException"]), "EventException"
+        )
         ex, created = ex_model.objects.get_or_create(event=event, original_start=orig)
         if title is not None:
             ex.override_title = title
@@ -606,7 +737,7 @@ def api_edit_event(request, event_id):
             ex.override_end_time = edt
         ex.is_cancelled = False
         ex.save()
-        return JsonResponse({'success': True, 'updated_occurrence': True})
+        return JsonResponse({"success": True, "updated_occurrence": True})
 
     # Series edit — update event fields
     if title is not None:
@@ -624,8 +755,10 @@ def api_edit_event(request, event_id):
             edt = timezone.make_aware(edt)
         event.end_time = edt
     if category_name is not None:
-        cat_obj, _ = Category.objects.get_or_create(user=user_profile, name=category_name)
+        cat_obj, _ = Category.objects.get_or_create(
+            user=user_profile, name=category_name
+        )
         event.category = cat_obj
 
     event.save()
-    return JsonResponse({'success': True, 'updated_occurrence': False})
+    return JsonResponse({"success": True, "updated_occurrence": False})

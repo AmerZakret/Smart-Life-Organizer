@@ -12,15 +12,17 @@ from .tokens import account_activation_token
 
 User = get_user_model()
 
+
 def landing_page(request):
     if request.user.is_authenticated:
-        return redirect('dashboard')
-    return render(request, 'users/landing.html')
+        return redirect("dashboard")
+    return render(request, "users/landing.html")
+
 
 def register(request):
     if request.user.is_authenticated:
-        return redirect('dashboard')
-    if request.method == 'POST':
+        return redirect("dashboard")
+    if request.method == "POST":
         form = UserCreationForm(request.POST)
         if form.is_valid():
             user = form.save(commit=False)
@@ -33,6 +35,7 @@ def register(request):
             # Create UserProfile automatically via signal or explicitly
             try:
                 from .models import UserProfile
+
                 UserProfile.objects.get_or_create(user=user)
             except Exception:
                 pass
@@ -41,20 +44,36 @@ def register(request):
             if not settings.DEBUG:
                 uid = urlsafe_base64_encode(force_bytes(user.pk))
                 token = account_activation_token.make_token(user)
-                activation_link = request.build_absolute_uri(f"/activate/{uid}/{token}/")
-                subject = 'Activate your Smart Life Organizer account'
-                message = render_to_string('users/activation_email.txt', {
-                    'user': user,
-                    'activation_link': activation_link,
-                })
-                send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=True)
-                messages.success(request, 'Account created. Check your email to activate your account.')
+                activation_link = request.build_absolute_uri(
+                    f"/activate/{uid}/{token}/"
+                )
+                subject = "Activate your Smart Life Organizer account"
+                message = render_to_string(
+                    "users/activation_email.txt",
+                    {
+                        "user": user,
+                        "activation_link": activation_link,
+                    },
+                )
+                send_mail(
+                    subject,
+                    message,
+                    settings.DEFAULT_FROM_EMAIL,
+                    [user.email],
+                    fail_silently=True,
+                )
+                messages.success(
+                    request,
+                    "Account created. Check your email to activate your account.",
+                )
             else:
-                messages.success(request, 'Account created and activated (development mode).')
-            return redirect('login')
+                messages.success(
+                    request, "Account created and activated (development mode)."
+                )
+            return redirect("login")
     else:
         form = UserCreationForm()
-    return render(request, 'users/register.html', {'form': form})
+    return render(request, "users/register.html", {"form": form})
 
 
 def activate(request, uidb64, token):
@@ -67,8 +86,10 @@ def activate(request, uidb64, token):
     if user is not None and account_activation_token.check_token(user, token):
         user.is_active = True
         user.save()
-        messages.success(request, 'Your account has been activated. You can now log in.')
-        return redirect('login')
+        messages.success(
+            request, "Your account has been activated. You can now log in."
+        )
+        return redirect("login")
     else:
-        messages.error(request, 'Activation link is invalid or has expired.')
-        return redirect('landing-page')
+        messages.error(request, "Activation link is invalid or has expired.")
+        return redirect("landing-page")

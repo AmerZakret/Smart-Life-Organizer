@@ -57,15 +57,28 @@ def _generate_and_cache_tip(event_id: int, event_title: str, start_time) -> None
         tip_text = generate_event_tip(event_title, start_time)
         if tip_text:
             AITip.objects.create(event=event, tip_text=tip_text)
-            logger.info("AITip cached for event '%s' (id=%s) on attempt %s.", event_title, event_id, attempt+1)
+            logger.info(
+                "AITip cached for event '%s' (id=%s) on attempt %s.",
+                event_title,
+                event_id,
+                attempt + 1,
+            )
             return
-        
+
         if attempt < max_retries - 1:
             wait_time = (attempt + 1) * 15  # 15s, 30s
-            logger.debug("Tip generation failed for event %s. Retrying in %ss...", event_id, wait_time)
+            logger.debug(
+                "Tip generation failed for event %s. Retrying in %ss...",
+                event_id,
+                wait_time,
+            )
             time.sleep(wait_time)
 
-    logger.warning("Failed to generate AI tip for event '%s' after %s attempts.", event_title, max_retries)
+    logger.warning(
+        "Failed to generate AI tip for event '%s' after %s attempts.",
+        event_title,
+        max_retries,
+    )
 
 
 @receiver(post_save, sender="planner.Event")
@@ -82,7 +95,7 @@ def trigger_ai_tip_on_event_create(sender, instance, created, **kwargs):
     thread = threading.Thread(
         target=_generate_and_cache_tip,
         args=(instance.pk, instance.title, instance.start_time),
-        daemon=True,   # dies with the main process — no orphan threads
+        daemon=True,  # dies with the main process — no orphan threads
         name=f"ai-tip-event-{instance.pk}",
     )
     thread.start()

@@ -9,18 +9,31 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('planner', '0001_initial'),
+        ("planner", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='AITip',
+            name="AITip",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('tip_text', models.CharField(max_length=255)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('is_notified', models.BooleanField(default=False)),
-                ('event', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='planner.event')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("tip_text", models.CharField(max_length=255)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("is_notified", models.BooleanField(default=False)),
+                (
+                    "event",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE, to="planner.event"
+                    ),
+                ),
             ],
         ),
     ]

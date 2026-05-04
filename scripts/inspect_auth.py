@@ -1,7 +1,7 @@
 import os
 import django
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'smartlife_project.settings')
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "smartlife_project.settings")
 django.setup()
 
 from django.contrib.auth.forms import AuthenticationForm  # noqa: E402

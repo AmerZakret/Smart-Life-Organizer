@@ -9,31 +9,69 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('users', '0001_initial'),
+        ("users", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Event',
+            name="Event",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('title', models.CharField(max_length=150)),
-                ('description', models.TextField(blank=True)),
-                ('start_time', models.DateTimeField()),
-                ('end_time', models.DateTimeField()),
-                ('category', models.CharField(choices=[('Work', 'Work'), ('Health', 'Health'), ('Personal', 'Personal')], max_length=50)),
-                ('is_completed', models.BooleanField(default=False)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='users.userprofile')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("title", models.CharField(max_length=150)),
+                ("description", models.TextField(blank=True)),
+                ("start_time", models.DateTimeField()),
+                ("end_time", models.DateTimeField()),
+                (
+                    "category",
+                    models.CharField(
+                        choices=[
+                            ("Work", "Work"),
+                            ("Health", "Health"),
+                            ("Personal", "Personal"),
+                        ],
+                        max_length=50,
+                    ),
+                ),
+                ("is_completed", models.BooleanField(default=False)),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="users.userprofile",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='Habit',
+            name="Habit",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=100)),
-                ('current_streak', models.IntegerField(default=0)),
-                ('last_completed_date', models.DateField(blank=True, null=True)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='users.userprofile')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=100)),
+                ("current_streak", models.IntegerField(default=0)),
+                ("last_completed_date", models.DateField(blank=True, null=True)),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="users.userprofile",
+                    ),
+                ),
             ],
         ),
     ]

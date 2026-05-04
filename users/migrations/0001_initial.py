@@ -15,12 +15,37 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='UserProfile',
+            name="UserProfile",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('timezone', models.CharField(default='UTC', max_length=50)),
-                ('ai_tone', models.CharField(choices=[('motivational', 'Motivational'), ('direct', 'Direct'), ('professional', 'Professional')], default='direct', max_length=20)),
-                ('user', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("timezone", models.CharField(default="UTC", max_length=50)),
+                (
+                    "ai_tone",
+                    models.CharField(
+                        choices=[
+                            ("motivational", "Motivational"),
+                            ("direct", "Direct"),
+                            ("professional", "Professional"),
+                        ],
+                        default="direct",
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "user",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
     ]

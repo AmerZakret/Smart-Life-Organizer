@@ -21,16 +21,18 @@ def expand_events_for_range(events, start_range, end_range):
         # Non-recurring events: include if in range
         if not ev.rrule:
             if ev.start_time <= end_range and ev.end_time >= start_range:
-                occurrences.append({
-                    'event': ev,
-                    'start_time': ev.start_time,
-                    'end_time': ev.end_time,
-                    'title': ev.title,
-                    'description': ev.description,
-                    'category': ev.category,
-                    'is_cancelled': False,
-                    'original_start': None,
-                })
+                occurrences.append(
+                    {
+                        "event": ev,
+                        "start_time": ev.start_time,
+                        "end_time": ev.end_time,
+                        "title": ev.title,
+                        "description": ev.description,
+                        "category": ev.category,
+                        "is_cancelled": False,
+                        "original_start": None,
+                    }
+                )
             continue
 
         # Recurring event: build rrule and iterate
@@ -41,11 +43,17 @@ def expand_events_for_range(events, start_range, end_range):
 
         # Determine occurrences within window
         # Add a small buffer to include events that start before but end after start_range
-        occs = rule.between(start_range - timedelta(days=1), end_range + timedelta(days=1), inc=True)
+        occs = rule.between(
+            start_range - timedelta(days=1), end_range + timedelta(days=1), inc=True
+        )
         duration = ev.end_time - ev.start_time
 
         # Load exceptions for this event into a dict by original_start
-        exc_map = {ex.original_start: ex for ex in getattr(ev, 'exceptions', []).all()} if hasattr(ev, 'exceptions') else {}
+        exc_map = (
+            {ex.original_start: ex for ex in getattr(ev, "exceptions", []).all()}
+            if hasattr(ev, "exceptions")
+            else {}
+        )
 
         for occ in occs:
             # Apply recurrence_end if set
@@ -66,28 +74,28 @@ def expand_events_for_range(events, start_range, end_range):
             if ex:
                 # apply overrides
                 occurrence = {
-                    'event': ev,
-                    'start_time': ex.override_start_time or start_dt,
-                    'end_time': ex.override_end_time or end_dt,
-                    'title': ex.override_title or ev.title,
-                    'description': ex.override_description or ev.description,
-                    'category': ev.category,
-                    'is_cancelled': False,
-                    'original_start': start_dt,
+                    "event": ev,
+                    "start_time": ex.override_start_time or start_dt,
+                    "end_time": ex.override_end_time or end_dt,
+                    "title": ex.override_title or ev.title,
+                    "description": ex.override_description or ev.description,
+                    "category": ev.category,
+                    "is_cancelled": False,
+                    "original_start": start_dt,
                 }
             else:
                 occurrence = {
-                    'event': ev,
-                    'start_time': start_dt,
-                    'end_time': end_dt,
-                    'title': ev.title,
-                    'description': ev.description,
-                    'category': ev.category,
-                    'is_cancelled': False,
-                    'original_start': start_dt,
+                    "event": ev,
+                    "start_time": start_dt,
+                    "end_time": end_dt,
+                    "title": ev.title,
+                    "description": ev.description,
+                    "category": ev.category,
+                    "is_cancelled": False,
+                    "original_start": start_dt,
                 }
             occurrences.append(occurrence)
 
     # Sort by start_time
-    occurrences.sort(key=lambda o: o['start_time'])
+    occurrences.sort(key=lambda o: o["start_time"])
     return occurrences
