@@ -49,7 +49,7 @@ else:
         )
 
 # ── Model + generation settings ───────────────────────────────────────────────
-_MODEL_NAME = "gemini-1.5-flash"
+_MODEL_NAME = "gemini-flash-latest"
 
 if _GENAI_AVAILABLE and genai_types is not None:
     _GENERATE_CONTENT_CONFIG = genai_types.GenerateContentConfig(
@@ -61,11 +61,11 @@ else:
 
 # ── System prompt (exact spec from plan.txt §5) ───────────────────────────────
 _SYSTEM_PROMPT_TEMPLATE = (
-    "You are a concise, helpful smart assistant. "
-    "The user has scheduled an event: {event_title} at {start_time}. "
-    "Provide a single, highly actionable tip to prepare for this event. "
-    "Maximum 15 words. "
-    "Do not use formatting, markdown, or conversational filler."
+    "You are a sophisticated personal productivity assistant. "
+    "The user has scheduled an event: '{event_title}' on {start_time}. "
+    "Provide one high-quality, insightful, and practical tip to help the user prepare or perform better. "
+    "Be specific to the context of the event title. Avoid generic advice like 'be on time'. "
+    "Keep your response between 15 and 25 words. Do not use markdown or conversational filler."
 )
 
 
@@ -103,8 +103,12 @@ def generate_event_tip(event_title: str, start_time) -> str | None:
     try:
         response = _client.models.generate_content(
             model=_MODEL_NAME,
-            contents=prompt,
-            config=_GENERATE_CONTENT_CONFIG,
+            contents=f"Event: '{event_title}' on {formatted_time}",
+            config=genai_types.GenerateContentConfig(
+                system_instruction="You are a sophisticated productivity assistant. Provide one insightful, specific, and practical preparation tip for the given event. Avoid generic advice. Respond with exactly one helpful sentence.",
+                max_output_tokens=1000,
+                temperature=0.8,
+            ),
         )
         tip = response.text.strip() if response.text else None
         if tip:

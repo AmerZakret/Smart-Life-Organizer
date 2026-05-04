@@ -6,7 +6,21 @@
 
 {% block extra_head %}
 <style>
-    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+    .day-group + .day-group { margin-top: 0; }
+    .event-card {
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .event-card:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    }
+    .today-marker {
+        background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
+        color: white;
+    }
+    .time-pill {
+        font-variant-numeric: tabular-nums;
+    }
 </style>
 {% endblock %}
 
@@ -16,7 +30,7 @@
     <!-- Action bar -->
     <div class="flex items-center justify-between">
         <p class="text-sm text-slate-500">
-            All your upcoming events in one place.
+            Your upcoming events, organized by day.
         </p>
         <button id="btn-open-event-modal"
             onclick="document.getElementById('event-modal').classList.remove('hidden')"
@@ -28,81 +42,103 @@
         </button>
     </div>
 
-    <!-- Calendar Grid Header + Body -->
+    <!-- Calendar: Vertical Day-by-Day Timeline -->
     <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-        <!-- Day headers -->
-        <div class="cal-grid bg-slate-50 border-b border-slate-100">
-            <div class="py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide">Mon</div>
-            <div class="py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide">Tue</div>
-            <div class="py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide">Wed</div>
-            <div class="py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide">Thu</div>
-            <div class="py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide">Fri</div>
-            <div class="py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide">Sat</div>
-            <div class="py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide">Sun</div>
-        </div>
-
-        <!-- Events by month — simplified list view inside the page since full calendar grid needs JS -->
-        <div class="p-4">
-            {% if events %}
-            <div class="space-y-2" id="events-container">
-                {% for occ in events %}
-                <div class="flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all group">
-                    <!-- Date badge -->
-                    <div class="shrink-0 w-12 h-12 rounded-xl flex flex-col items-center justify-center
-                        {% if occ.category and occ.category.name == 'Work' %}bg-blue-50 text-blue-600
-                            {% elif occ.category and occ.category.name == 'Health' %}bg-emerald-50 text-emerald-600
-                            {% else %}bg-purple-50 text-purple-600{% endif %}">
-                        <p class="text-lg font-bold leading-none">{{ occ.start_time|date:"d" }}</p>
-                        <p class="text-xs font-medium uppercase">{{ occ.start_time|date:"M" }}</p>
+        {% if days_grouped %}
+        <div id="events-container" class="divide-y divide-slate-100">
+            {% for day in days_grouped %}
+            <div class="day-group" id="day-{{ day.date|date:'Y-m-d' }}">
+                <!-- Day Header -->
+                <div class="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-sm border-b border-slate-100 px-5 py-3 flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-xl flex flex-col items-center justify-center shrink-0
+                        {% if day.date == today %}today-marker{% else %}bg-white border border-slate-200 text-slate-700{% endif %}">
+                        <span class="text-lg font-bold leading-none">{{ day.date|date:"d" }}</span>
+                        <span class="text-[10px] font-semibold uppercase tracking-wide {% if day.date == today %}text-teal-100{% else %}text-slate-400{% endif %}">{{ day.date|date:"M" }}</span>
                     </div>
-                    <!-- Details -->
-                    <div class="flex-1 min-w-0">
-                        <p class="text-sm font-semibold text-slate-800 truncate {{ occ.event.is_completed|yesno:'line-through text-slate-400,' }}">
-                            {{ occ.title }}
+                    <div>
+                        <p class="text-sm font-semibold {% if day.date == today %}text-teal-700{% else %}text-slate-800{% endif %}">
+                            {% if day.date == today %}Today
+                            {% elif day.date == tomorrow %}Tomorrow
+                            {% else %}{{ day.date|date:"l" }}{% endif %}
                         </p>
-                        <div class="flex items-center gap-2 mt-0.5 flex-wrap">
-                            <span class="text-xs text-slate-400">{{ occ.start_time|date:"D, H:i" }} → {{ occ.end_time|time:"H:i" }}</span>
-                            <span class="inline-flex items-center px-1.5 py-0.5 rounded-md text-xs font-medium
-                                {% if occ.category and occ.category.name == 'Work' %}bg-blue-50 text-blue-600
-                                {% elif occ.category and occ.category.name == 'Health' %}bg-emerald-50 text-emerald-600
-                                {% else %}bg-purple-50 text-purple-600{% endif %}">
-                                {% if occ.category %}{{ occ.category.name }}{% endif %}
-                            </span>
-                            {% if occ.event.is_completed %}
-                                <span class="inline-flex items-center px-1.5 py-0.5 rounded-md text-xs font-medium bg-teal-50 text-teal-600">✓ Completed</span>
-                            {% endif %}
-                        </div>
-                        {% if occ.description %}
-                        <p class="text-xs text-slate-400 truncate mt-0.5">{{ occ.description }}</p>
-                        {% endif %}
-                    </div>
-                    <!-- AI tip indicator -->
-                    {% if occ.event.aitip %}
-                    <div class="shrink-0" title="{{ occ.event.aitip.tip_text }}">
-                        <span class="w-7 h-7 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center text-sm">💡</span>
-                    </div>
-                    {% endif %}
-                    <!-- Delete button -->
-                    <div class="shrink-0">
-                        <button onclick="handleDeleteClick(this)" 
-                            data-event-id="{{ occ.event.pk }}" 
-                            data-recurring="{% if occ.event.rrule %}true{% else %}false{% endif %}"
-                            data-original-start="{% if occ.original_start %}{{ occ.original_start|date:'c' }}{% else %}{% endif %}"
-                            class="text-xs text-red-500 hover:underline">Delete</button>
+                        <p class="text-xs text-slate-400">{{ day.date|date:"F j, Y" }} · {{ day.events|length }} event{{ day.events|length|pluralize }}</p>
                     </div>
                 </div>
-                {% endfor %}
+
+                <!-- Events for this day -->
+                <div class="divide-y divide-slate-50">
+                    {% for occ in day.events %}
+                    <div class="event-card flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50/60 transition-colors group"
+                         data-event-id="{{ occ.event.pk }}">
+                        <!-- Time Column -->
+                        <div class="shrink-0 w-20 text-right">
+                            <p class="time-pill text-xs font-semibold text-slate-600">{{ occ.start_time|time:"H:i" }}</p>
+                            <p class="time-pill text-[11px] text-slate-300 mt-0.5">{{ occ.end_time|time:"H:i" }}</p>
+                        </div>
+
+                        <!-- Color accent bar -->
+                        <div class="w-1 self-stretch rounded-full shrink-0"
+                             style="background-color: {% if occ.category and occ.category.color %}{{ occ.category.color }}{% else %}#94a3b8{% endif %};"></div>
+
+                        <!-- Event Details -->
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-semibold text-slate-800 truncate {{ occ.event.is_completed|yesno:'line-through text-slate-400,' }}">
+                                {{ occ.title }}
+                            </p>
+                            <div class="flex items-center gap-2 mt-1 flex-wrap">
+                                {% if occ.category %}
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium"
+                                      style="background-color: {% if occ.category.color %}{{ occ.category.color }}18{% else %}#f1f5f9{% endif %}; color: {% if occ.category.color %}{{ occ.category.color }}{% else %}#64748b{% endif %};">
+                                    <span class="w-1.5 h-1.5 rounded-full" style="background-color: {% if occ.category.color %}{{ occ.category.color }}{% else %}#94a3b8{% endif %};"></span>
+                                    {{ occ.category.name }}
+                                </span>
+                                {% endif %}
+                                {% if occ.event.rrule %}
+                                <span class="inline-flex items-center px-1.5 py-0.5 rounded-md text-[11px] font-medium bg-amber-50 text-amber-600">
+                                    ↻ Recurring
+                                </span>
+                                {% endif %}
+                                {% if occ.event.is_completed %}
+                                <span class="inline-flex items-center px-1.5 py-0.5 rounded-md text-[11px] font-medium bg-teal-50 text-teal-600">✓ Done</span>
+                                {% endif %}
+                            </div>
+                            {% if occ.description %}
+                            <p class="text-xs text-slate-400 truncate mt-1">{{ occ.description }}</p>
+                            {% endif %}
+                        </div>
+
+                        <!-- AI tip indicator -->
+                        {% if occ.event.aitip %}
+                        <div class="shrink-0 cursor-pointer hover:scale-110 transition-transform" 
+                             title="Click to see AI Tip"
+                             onclick="showTip('{{ occ.event.aitip.tip_text|escapejs }}', '{{ occ.event.title|escapejs }}')">
+                            <span class="w-8 h-8 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center text-sm shadow-sm border border-teal-100">💡</span>
+                        </div>
+                        {% endif %}
+
+                        <!-- Delete button -->
+                        <div class="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onclick="handleDeleteClick(this)"
+                                data-event-id="{{ occ.event.pk }}"
+                                data-recurring="{% if occ.event.rrule %}true{% else %}false{% endif %}"
+                                data-original-start="{% if occ.original_start %}{{ occ.original_start|date:'c' }}{% else %}{% endif %}"
+                                class="text-xs text-red-400 hover:text-red-600 font-medium transition-colors">Delete</button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
-            {% else %}
-            <div class="text-center py-16">
-                <svg class="w-12 h-12 text-slate-200 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                </svg>
-                <p class="text-sm font-medium text-slate-400">No events yet</p>
-                <p class="text-xs text-slate-300 mt-1">Click "New Event" to get started.</p>
-            </div>
-            {% endif %}
+            {% endfor %}
         </div>
+        {% else %}
+        <div class="text-center py-20">
+            <svg class="w-14 h-14 text-slate-200 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            <p class="text-sm font-medium text-slate-400">No events yet</p>
+            <p class="text-xs text-slate-300 mt-1">Click "New Event" to get started.</p>
+        </div>
+        {% endif %}
     </div>
 </div>
 
@@ -164,7 +200,7 @@
                 <div class="mt-2">
                     <button type="button" id="btn-show-new-category" class="text-xs text-teal-600 hover:underline">+ Add new category</button>
                 </div>
-                <div id="new-category-row" class="mt-2">
+                <div id="new-category-row" class="mt-2 hidden">
                     <input id="new-category-name" type="text" placeholder="New category name" class="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900" />
                     <div class="flex items-center gap-2 mt-2">
                         <label class="text-xs text-slate-500">Color</label>
@@ -207,13 +243,38 @@
         </form>
     </div>
 </div>
+
+<!-- ── AI Tip Modal ── -->
+<div id="aitip-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4">
+    <!-- Backdrop -->
+    <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onclick="closeTip()"></div>
+
+    <!-- Dialog -->
+    <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden z-10 animate-in fade-in zoom-in duration-200">
+        <div class="bg-teal-600 px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-2 text-white">
+                <span class="text-xl">💡</span>
+                <h3 class="font-bold tracking-wide text-sm uppercase">Gemini AI Tip</h3>
+            </div>
+            <button onclick="closeTip()" class="text-teal-100 hover:text-white transition-colors text-2xl leading-none">&times;</button>
+        </div>
+        <div class="p-6 space-y-4">
+            <p id="aitip-text" class="text-slate-700 text-lg leading-relaxed font-medium italic text-center"></p>
+            <div class="pt-4 border-t border-slate-100">
+                <p class="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-1">For Event</p>
+                <p id="aitip-event-title" class="text-sm font-semibold text-slate-800"></p>
+            </div>
+            <button onclick="closeTip()" 
+                class="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-bold py-3 rounded-xl transition-colors mt-2">
+                Got it
+            </button>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-try {
-    console.log('calendar script loaded');
-} catch(e){ /* ignore */ }
 function handleDeleteClick(btn){
     const eventId = btn.getAttribute('data-event-id');
     const isRecurring = btn.getAttribute('data-recurring') === 'true';
@@ -243,9 +304,8 @@ function doDelete(eventId, scope, originalStart){
         else alert(data.error || 'Failed to delete.');
     }).catch(()=>alert('Network error'));
 }
-// Initialize modal controls: repeat toggle, category select, open modal reset, and new-category button
-// These must run on page load so inputs are interactive before submitting.
-// Toggle repeat options visibility
+
+// Initialize modal controls
 const repeatCheckboxInit = document.getElementById('event-repeat-weekly');
 if (repeatCheckboxInit){
     repeatCheckboxInit.addEventListener('change', function(){
@@ -254,7 +314,6 @@ if (repeatCheckboxInit){
     });
 }
 
-// show/hide new category inputs when selection changes
 const categorySelectInit = document.getElementById('event-category');
 if (categorySelectInit){
     categorySelectInit.addEventListener('change', function(){
@@ -269,7 +328,6 @@ if (categorySelectInit){
     });
 }
 
-// When opening the modal, ensure new category inputs are reset/hidden
 const openBtnInit = document.getElementById('btn-open-event-modal');
 if (openBtnInit){
     openBtnInit.addEventListener('click', function(){
@@ -286,7 +344,6 @@ if (openBtnInit){
     });
 }
 
-// explicit show-new-category button
 const showNewCatBtnInit = document.getElementById('btn-show-new-category');
 if (showNewCatBtnInit){
     showNewCatBtnInit.addEventListener('click', function(){
@@ -299,18 +356,14 @@ if (showNewCatBtnInit){
     });
 }
 
-// Attach submit handler safely and log
+// Submit handler
 const createForm = document.getElementById('create-event-form');
-if (!createForm){
-    console.error('create-event-form not found in DOM');
-} else {
-    console.log('attaching submit handler to create-event-form');
+if (createForm){
     createForm.addEventListener('submit', submitEventHandler);
 }
 
 function submitEventHandler(e){
     if (e && e.preventDefault) e.preventDefault();
-    try{ console.log('submitEventHandler invoked'); } catch(_){}
 
     const title    = document.getElementById('event-title').value.trim();
     const start    = document.getElementById('event-start').value;
@@ -322,7 +375,6 @@ function submitEventHandler(e){
 
     errBox.classList.add('hidden');
 
-    // if user chose to add a new category (or left select blank but filled name), read its name and color
     let category_color = null;
     const newNameField = document.getElementById('new-category-name');
     const newColorField = document.getElementById('new-category-color');
@@ -353,7 +405,6 @@ function submitEventHandler(e){
     submitBtn.textContent = 'Creating…';
 
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-    // build optional recurrence
     let rrule = null;
     let recurrence_end = null;
     if (document.getElementById('event-repeat-weekly').checked){
@@ -361,7 +412,6 @@ function submitEventHandler(e){
         rrule = `FREQ=WEEKLY;BYDAY=${dow}`;
         const untilDate = document.getElementById('event-recurrence-end').value;
         if (untilDate){
-            // set recurrence_end to end of day
             recurrence_end = `${untilDate}T23:59:59`;
         }
     }
@@ -374,58 +424,18 @@ function submitEventHandler(e){
         },
         body: JSON.stringify({ title, description: desc, start_time: start, end_time: end, category, category_color: category_color, rrule: rrule, recurrence_end: recurrence_end }),
     })
-    .then(res => {
-        console.log('create event response status', res.status);
-        return res.json().then(data => ({ status: res.status, body: data }));
-    })
+    .then(res => res.json().then(data => ({ status: res.status, body: data })))
     .then(({status, body}) => {
-        console.log('create event response body', body);
-        const data = body;
-        if (data.success) {
+        if (body.success) {
             document.getElementById('event-modal').classList.add('hidden');
-            // Append new event to the list
-            const container = document.getElementById('events-container');
-            if (container) {
-                const el = document.createElement('div');
-                el.className = 'flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-100 transition-all';
-                el.innerHTML = `
-                    <div class="shrink-0 w-12 h-12 rounded-xl flex flex-col items-center justify-center bg-blue-50 text-blue-600">
-                        <p class="text-lg font-bold leading-none">${new Date(data.start_time).getDate()}</p>
-                        <p class="text-xs font-medium uppercase">${new Date(data.start_time).toLocaleString('en', {month:'short'})}</p>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <p class="text-sm font-semibold text-slate-800 truncate">${data.title}</p>
-                        <div class="flex items-center gap-2 mt-0.5">
-                            <span class="text-xs text-slate-400">${new Date(data.start_time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
-                            <span class="inline-flex items-center px-1.5 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-600">${data.category}</span>
-                        </div>
-                    </div>`;
-                container.prepend(el);
-            }
-            // Reset form
-            try{ if (createForm) createForm.reset(); } catch(e){}
-            // add new category to select if missing
-            try {
-                const sel = document.getElementById('event-category');
-                if (sel){
-                    let exists = false;
-                    for (const opt of sel.options){ if (opt.value === data.category) { exists = true; break; } }
-                    if (!exists){
-                        const opt = document.createElement('option');
-                        opt.value = data.category;
-                        opt.textContent = data.category;
-                        sel.appendChild(opt);
-                    }
-                }
-            } catch (e){}
+            // Reload to show event in correct day group
+            location.reload();
         } else {
-            console.warn('create event returned failure', data);
-            errBox.textContent = data.error || 'Something went wrong.';
+            errBox.textContent = body.error || 'Something went wrong.';
             errBox.classList.remove('hidden');
         }
     })
     .catch((err) => {
-        console.error('create event fetch error', err);
         errBox.textContent = 'Network error — please try again.';
         errBox.classList.remove('hidden');
     })
@@ -435,7 +445,7 @@ function submitEventHandler(e){
     });
 }
 
-// Bind click handler to Create button (ensures no native form submit occurs)
+// Bind click handler to Create button
 const submitBtnEl = document.getElementById('btn-submit-event');
 if (submitBtnEl){
     submitBtnEl.addEventListener('click', submitEventHandler);
@@ -447,5 +457,16 @@ if (formEl){
     formEl.addEventListener('submit', submitEventHandler);
 }
 
+function showTip(text, title) {
+    document.getElementById('aitip-text').textContent = text;
+    document.getElementById('aitip-event-title').textContent = title;
+    document.getElementById('aitip-modal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden'; // Prevent scroll
+}
+
+function closeTip() {
+    document.getElementById('aitip-modal').classList.add('hidden');
+    document.body.style.overflow = '';
+}
 </script>
 {% endblock %}

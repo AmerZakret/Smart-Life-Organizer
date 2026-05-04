@@ -33,33 +33,39 @@ logger = logging.getLogger(__name__)
 def _generate_and_cache_tip(event_id: int, event_title: str, start_time) -> None:
     """
     Worker function executed in a background thread.
-
-    Imports are deferred inside the function to avoid AppRegistryNotReady
-    errors that occur when signals are wired up early in the app lifecycle.
     """
-    # Late imports to ensure the app registry is ready
+    import time
     from ai_engine.models import AITip
     from ai_engine.services import generate_event_tip
     from planner.models import Event
 
+    # Small delay to ensure DB transaction is committed
+    time.sleep(1.5)
+
     try:
         event = Event.objects.get(pk=event_id)
     except Event.DoesNotExist:
-        logger.warning("AI tip thread: Event %s no longer exists.", event_id)
         return
 
-    # Guard: don't overwrite an existing tip (e.g. if signal fires again)
+    # Guard: don't overwrite an existing tip
     if AITip.objects.filter(event=event).exists():
-        logger.debug("AI tip already exists for event %s — skipping.", event_id)
         return
 
-    tip_text = generate_event_tip(event_title, start_time)
+    # Retry logic (up to 3 attempts with exponential backoff)
+    max_retries = 3
+    for attempt in range(max_retries):
+        tip_text = generate_event_tip(event_title, start_time)
+        if tip_text:
+            AITip.objects.create(event=event, tip_text=tip_text)
+            logger.info("AITip cached for event '%s' (id=%s) on attempt %s.", event_title, event_id, attempt+1)
+            return
+        
+        if attempt < max_retries - 1:
+            wait_time = (attempt + 1) * 15  # 15s, 30s
+            logger.debug("Tip generation failed for event %s. Retrying in %ss...", event_id, wait_time)
+            time.sleep(wait_time)
 
-    if tip_text:
-        AITip.objects.create(event=event, tip_text=tip_text)
-        logger.info("AITip cached for event '%s' (id=%s).", event_title, event_id)
-    else:
-        logger.debug("No tip returned for event '%s' (id=%s).", event_title, event_id)
+    logger.warning("Failed to generate AI tip for event '%s' after %s attempts.", event_title, max_retries)
 
 
 @receiver(post_save, sender="planner.Event")

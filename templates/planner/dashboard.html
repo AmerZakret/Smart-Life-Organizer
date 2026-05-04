@@ -161,7 +161,7 @@
                     </div>
                 </div>
                 {% empty %}
-                <div class="text-center py-8">
+                <div class="text-center py-8" id="habits-empty-state">
                     <p class="text-sm text-slate-400">No habits yet.</p>
                     <p class="text-xs text-slate-300 mt-1">Add habits to achieve streaks.</p>
                 </div>
@@ -254,6 +254,9 @@ document.getElementById('btn-create-habit').addEventListener('click', function()
                         <button onclick="deleteHabit(${data.id})" class="text-xs text-red-500 hover:underline">Delete</button>
                     </div>`;
                 container.prepend(el);
+                // Remove empty-state placeholder if present
+                const emptyState = document.getElementById('habits-empty-state');
+                if (emptyState) emptyState.remove();
                 document.getElementById('habit-name-input').value = '';
             }
         } else {

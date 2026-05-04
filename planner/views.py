@@ -88,14 +88,35 @@ def calendar(request):
     user_profile = request.user.userprofile
     # Show events for the next 30 days (expand recurring events)
     from django.utils import timezone
+    from collections import OrderedDict
     now = timezone.now()
     window_end = now + timezone.timedelta(days=30)
 
     events_qs = Event.objects.filter(user=user_profile).select_related('aitip')
     occurrences = expand_events_for_range(events_qs, now, window_end)
+
+    # Group occurrences by date for vertical day-by-day layout
+    days_dict = OrderedDict()
+    for occ in occurrences:
+        day = occ['start_time'].date()
+        if day not in days_dict:
+            days_dict[day] = []
+        days_dict[day].append(occ)
+
+    days_grouped = [{'date': day, 'events': evts} for day, evts in days_dict.items()]
+
+    today = now.date()
+    tomorrow = today + timedelta(days=1)
+
     # provide user's categories to the template for dynamic select
     categories = Category.objects.filter(user=user_profile).order_by('name')
-    context = {'events': occurrences, 'categories': categories}
+    context = {
+        'events': occurrences,
+        'days_grouped': days_grouped,
+        'today': today,
+        'tomorrow': tomorrow,
+        'categories': categories,
+    }
     return render(request, 'planner/calendar.html', context)
 
 
