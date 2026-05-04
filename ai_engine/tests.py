@@ -17,6 +17,7 @@ def test_ai_tip_creation_signal():
         mocked_tip.return_value = "Mocked AI Tip: Stay focused."
 
         from planner.models import Category
+
         category = Category.objects.create(name="Work", user=user.userprofile)
 
         # Creating an event should trigger the signal
