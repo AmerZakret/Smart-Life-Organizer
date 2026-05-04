@@ -16,13 +16,16 @@ def test_ai_tip_creation_signal():
     with patch("ai_engine.services.generate_event_tip") as mocked_tip:
         mocked_tip.return_value = "Mocked AI Tip: Stay focused."
 
+        from planner.models import Category
+        category = Category.objects.create(name="Work", user=user.userprofile)
+
         # Creating an event should trigger the signal
         event = Event.objects.create(
             user=user.userprofile,
             title="AI Test Meeting",
             start_time=timezone.now() + timedelta(hours=1),
             end_time=timezone.now() + timedelta(hours=2),
-            category="Work",
+            category=category,
         )
 
         # Since it's in a thread, we might need a tiny sleep or just join the threads
@@ -30,7 +33,7 @@ def test_ai_tip_creation_signal():
         # starts a thread. In tests, we can often just wait for a second.
         import time
 
-        time.sleep(1)
+        time.sleep(3)
 
         assert AITip.objects.filter(event=event).exists()
         tip = AITip.objects.get(event=event)
