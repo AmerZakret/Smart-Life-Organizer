@@ -7,23 +7,6 @@
 {% block content %}
 <div class="space-y-6">
 
-    <!-- AI Tip Banner -->
-    {% if active_tip %}
-    <div id="ai-tip-banner" class="flex items-start gap-4 bg-white rounded-xl shadow-sm border border-teal-100 p-4">
-        <div class="shrink-0 flex items-center justify-center w-10 h-10 rounded-xl bg-teal-50 text-teal-600">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
-            </svg>
-        </div>
-        <div class="flex-1 min-w-0">
-            <p class="text-xs font-semibold text-teal-700 uppercase tracking-wide mb-0.5">Gemini AI Tip</p>
-            <p class="text-sm text-slate-700 leading-relaxed">{{ active_tip.tip_text }}</p>
-            <p class="text-xs text-slate-400 mt-1">For: <span class="font-medium text-slate-500">{{ active_tip.event.title }}</span></p>
-        </div>
-        <button onclick="document.getElementById('ai-tip-banner').remove()" class="text-slate-300 hover:text-slate-500 transition-colors text-lg leading-none">&times;</button>
-    </div>
-    {% endif %}
-
     <!-- Top row: Stats -->
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <!-- Events today -->
@@ -67,114 +50,157 @@
         </div>
     </div>
 
-    <!-- Middle row: Timeline + Habits -->
-    <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
-
-        <!-- Today's Timeline (3/5) -->
-        <div class="lg:col-span-3 bg-white rounded-xl shadow-sm border border-slate-100 p-4">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-sm font-semibold text-slate-800">Today's Timeline</h2>
-                <a href="{% url 'calendar' %}" class="text-xs text-teal-600 hover:underline font-medium">View calendar →</a>
+    <!-- Full-width: Daily Growth -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+        <div class="mb-6 pb-3 border-b border-slate-100 flex items-center justify-between">
+            <div>
+                <h2 class="text-base font-bold text-slate-800">Daily Growth (Quick View)</h2>
+                <p class="text-xs text-slate-400 mt-0.5">Rapidly track your tasks and habits.</p>
             </div>
-            <div class="space-y-2">
-                {% for event in events_today %}
-                <div class="flex items-start gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors group">
-                    <!-- Time -->
-                    <div class="shrink-0 text-right w-12">
-                        <p class="text-xs font-semibold text-slate-500">{{ event.start_time|time:"H:i" }}</p>
-                        <p class="text-xs text-slate-300">{{ event.end_time|time:"H:i" }}</p>
-                    </div>
-                    <!-- Color bar -->
-                    <div class="w-1 self-stretch rounded-full shrink-0
-                        {% if event.category == 'Work' %}bg-blue-400
-                        {% elif event.category == 'Health' %}bg-emerald-400
-                        {% else %}bg-purple-400{% endif %}">
-                    </div>
-                    <!-- Content -->
-                    <div class="flex-1 min-w-0">
-                        <p class="text-sm font-medium text-slate-800 truncate {{ event.is_completed|yesno:'line-through text-slate-400,' }}">
-                            {{ event.title }}
-                        </p>
-                        <p class="text-xs text-slate-400 mt-0.5">
-                            <span class="inline-flex items-center px-1.5 py-0.5 rounded-md text-xs font-medium
-                                {% if event.category == 'Work' %}bg-blue-50 text-blue-600
-                                {% elif event.category == 'Health' %}bg-emerald-50 text-emerald-600
-                                {% else %}bg-purple-50 text-purple-600{% endif %}">
-                                {{ event.category }}
-                            </span>
-                        </p>
-                    </div>
-                    {% if event.is_completed %}
-                    <svg class="w-4 h-4 text-teal-500 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                    </svg>
-                    {% endif %}
-                </div>
-                {% empty %}
-                <div class="text-center py-10">
-                    <svg class="w-10 h-10 text-slate-200 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                    </svg>
-                    <p class="text-sm text-slate-400">No events scheduled for today.</p>
-                    <a href="{% url 'calendar' %}" class="text-xs text-teal-600 hover:underline mt-1 inline-block">Add one on the Calendar →</a>
-                </div>
-                {% endfor %}
-            </div>
+            <a href="{% url 'growth' %}" class="text-xs text-teal-600 hover:underline font-bold uppercase tracking-widest">Full Management →</a>
         </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Left: Mini Tasks -->
+            <div class="flex flex-col">
+                <div class="mb-4">
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Mini Tasks</h3>
+                </div>
+                <div class="mb-4">
+                    <form id="create-mini-task-form" class="flex gap-2">
+                        <input id="mini-task-input" type="text" placeholder="Quick add task..."
+                            class="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                        <button id="btn-create-mini-task" type="button" class="px-5 py-2.5 rounded-xl bg-amber-500 text-white text-sm font-bold hover:bg-amber-600 transition-colors shadow-sm">Add</button>
+                    </form>
+                </div>
 
-        <!-- Habit Tracker (2/5) -->
-        <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-100 p-4">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-sm font-semibold text-slate-800">Habits</h2>
-                <span class="text-xs text-slate-400 bg-slate-100 rounded-full px-2 py-0.5">{{ habits.count }} active</span>
-            </div>
-            <div class="mb-3">
-                <form id="create-habit-form" class="flex gap-2">
-                    <input id="habit-name-input" type="text" placeholder="Add new habit (e.g. Drink water)"
-                        class="flex-1 px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400" />
-                    <button id="btn-create-habit" type="button" class="px-4 py-2 rounded-xl bg-amber-500 text-white text-sm font-medium">Add</button>
-                </form>
-            </div>
-
-            <div class="space-y-2" id="habits-list">
-                {% for habit in habits %}
-                <div class="flex items-center justify-between p-3 rounded-xl border border-slate-100 hover:border-teal-100 hover:bg-teal-50/30 transition-colors"
-                     id="habit-row-{{ habit.id }}">
-                    <div class="flex items-center gap-3 min-w-0">
-                        <button id="habit-toggle-{{ habit.id }}"
-                            onclick="toggleHabit({{ habit.id }})"
-                            class="w-8 h-8 rounded-lg border-2 border-slate-200 flex items-center justify-center text-white shrink-0 transition-all
-                                   hover:border-teal-500 hover:bg-teal-50"
-                            aria-label="Toggle habit {{ habit.name }}">
-                        </button>
-                        <div class="min-w-0">
-                            <p class="text-sm font-medium text-slate-700 truncate">{{ habit.name }}</p>
-                            <p class="text-xs text-slate-400">Last: {{ habit.last_completed_date|default:"Never" }}</p>
+                <div class="space-y-2.5 overflow-y-auto max-h-[300px] pr-2" id="mini-tasks-list">
+                    {% for task in tasks %}
+                    <div class="flex items-center justify-between p-3.5 rounded-xl border border-slate-100 hover:border-amber-100 hover:bg-amber-50/30 transition-colors"
+                         id="mini-task-row-{{ task.id }}">
+                        <div class="flex items-center gap-3 min-w-0 flex-1">
+                            <button id="mini-task-toggle-{{ task.id }}"
+                                onclick="toggleTask({{ task.id }})"
+                                class="w-6 h-6 rounded-md border-2 border-slate-300 flex items-center justify-center text-white shrink-0 transition-all hover:border-amber-500 hover:bg-amber-50 {% if task.is_completed %}bg-amber-500 border-amber-500{% endif %}"
+                                aria-label="Toggle task {{ task.title }}">
+                                {% if task.is_completed %}
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                {% endif %}
+                            </button>
+                            <div class="min-w-0 flex-1">
+                                <p id="mini-task-title-{{ task.id }}" class="text-sm font-medium text-slate-700 truncate transition-all {% if task.is_completed %}line-through text-slate-400{% endif %}">{{ task.title }}</p>
+                            </div>
                         </div>
                     </div>
-                    <div class="text-right shrink-0 ml-2">
-                        <p class="text-lg font-bold text-slate-900" id="streak-{{ habit.id }}">{{ habit.current_streak }}</p>
-                        <p class="text-xs text-amber-500 font-medium">🔥 streak</p>
+                    {% empty %}
+                    <div class="text-center py-10" id="mini-tasks-empty-state">
+                        <p class="text-sm text-slate-400">No pending tasks.</p>
                     </div>
-                    <div class="shrink-0 ml-3">
-                        <button onclick="deleteHabit({{ habit.id }})" class="text-xs text-red-500 hover:underline">Delete</button>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Right: Quick Habits -->
+            <div class="border-t md:border-t-0 md:border-l border-slate-100 pt-6 md:pt-0 md:pl-8 flex flex-col">
+                <div class="mb-4">
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Quick Habits</h3>
+                </div>
+                <div class="mb-4">
+                    <form id="create-habit-form" class="flex gap-2">
+                        <input id="habit-name-input" type="text" placeholder="Add new habit..."
+                            class="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                        <button id="btn-create-habit" type="button" class="px-5 py-2.5 rounded-xl bg-teal-600 text-white text-sm font-bold hover:bg-teal-700 transition-colors shadow-sm">Add</button>
+                    </form>
+                </div>
+
+                <div class="space-y-2.5 overflow-y-auto max-h-[300px] pr-2" id="habits-list">
+                    {% for habit in habits %}
+                    <div class="flex items-center justify-between p-3.5 rounded-xl border border-slate-100 hover:border-teal-100 hover:bg-teal-50/30 transition-colors"
+                         id="habit-row-{{ habit.id }}">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <button id="habit-toggle-{{ habit.id }}"
+                                onclick="toggleHabit({{ habit.id }})"
+                                class="w-8 h-8 rounded-lg border-2 border-slate-200 flex items-center justify-center text-white shrink-0 transition-all hover:border-teal-500 hover:bg-teal-50"
+                                aria-label="Toggle habit {{ habit.name }}">
+                            </button>
+                            <div class="min-w-0">
+                                <p class="text-sm font-medium text-slate-700 truncate">{{ habit.name }}</p>
+                            </div>
+                        </div>
+                        <div class="text-right shrink-0 ml-2">
+                            <p class="text-base font-bold text-slate-900" id="streak-{{ habit.id }}">{{ habit.current_streak }} 🔥</p>
+                        </div>
                     </div>
+                    {% empty %}
+                    <div class="text-center py-10" id="habits-empty-state">
+                        <p class="text-sm text-slate-400">No habits tracked yet.</p>
+                    </div>
+                    {% endfor %}
                 </div>
-                {% empty %}
-                <div class="text-center py-8" id="habits-empty-state">
-                    <p class="text-sm text-slate-400">No habits yet.</p>
-                    <p class="text-xs text-slate-300 mt-1">Add habits to achieve streaks.</p>
-                </div>
-                {% endfor %}
             </div>
         </div>
     </div>
 
-    <!-- Bottom row: Plotly Chart -->
-    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-4">
-        <h2 class="text-sm font-semibold text-slate-800 mb-4">Today's Events by Category</h2>
-        <div id="chart-container">
-            {{ chart_html|safe }}
+    <!-- Bottom Row: Timeline (Left) + AI Insights (Right) -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Today's Timeline -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h2 class="text-base font-bold text-slate-800">Today's Timeline</h2>
+                    <p class="text-xs text-slate-400 mt-0.5">Your schedule for the day.</p>
+                </div>
+                <a href="{% url 'calendar' %}" class="text-xs text-teal-600 hover:underline font-medium">Full Calendar →</a>
+            </div>
+            <div class="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                {% for event in events_today %}
+                <div class="flex items-start gap-4 p-3 rounded-xl border border-slate-50 bg-slate-50/50 hover:bg-white hover:shadow-sm transition-all group">
+                    <div class="shrink-0 text-center w-12 py-1 bg-white border border-slate-100 rounded-lg">
+                        <p class="text-[10px] font-bold text-slate-700">{{ event.start_time|time:"H:i" }}</p>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-bold text-slate-800 truncate {{ event.is_completed|yesno:'line-through text-slate-300,' }}">
+                            {{ event.title }}
+                        </p>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-10 bg-slate-50/30 rounded-2xl border border-dashed border-slate-200">
+                    <p class="text-sm font-medium text-slate-500">Nothing on the schedule today.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Gemini AI Insights -->
+        <div class="bg-gradient-to-br from-teal-600 to-teal-700 rounded-xl shadow-lg p-6 text-white flex flex-col">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                </div>
+                <h2 class="text-base font-bold uppercase tracking-wider">Gemini AI Insights</h2>
+            </div>
+            
+            <div class="flex-1 flex flex-col justify-center">
+                {% if dashboard_tip %}
+                <div class="bg-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/10 relative overflow-hidden group">
+                    <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/5 rounded-full blur-2xl group-hover:bg-white/10 transition-colors"></div>
+                    <p class="text-lg font-medium leading-relaxed italic relative z-10">
+                        "{{ dashboard_tip }}"
+                    </p>
+                </div>
+                {% else %}
+                <div class="text-center py-8">
+                    <p class="text-teal-100 text-sm italic">Syncing with your goals...</p>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="mt-8 pt-4 border-t border-white/10">
+                <p class="text-[10px] text-teal-100 uppercase tracking-widest font-bold">Personalized for {{ user.username }}</p>
+            </div>
         </div>
     </div>
 
@@ -183,6 +209,79 @@
 
 {% block extra_scripts %}
 <script>
+function toggleTask(taskId) {
+    const csrfToken = '{{ csrf_token }}';
+    fetch(`/api/tasks/${taskId}/toggle/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            const btn = document.getElementById(`mini-task-toggle-${taskId}`);
+            const title = document.getElementById(`mini-task-title-${taskId}`);
+            if (data.is_completed) {
+                btn.innerHTML = '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>';
+                btn.classList.add('bg-amber-500', 'border-amber-500');
+                title.classList.add('line-through', 'text-slate-400');
+            } else {
+                btn.innerHTML = '';
+                btn.classList.remove('bg-amber-500', 'border-amber-500');
+                title.classList.remove('line-through', 'text-slate-400');
+            }
+        }
+    })
+    .catch(() => {});
+}
+
+document.getElementById('btn-create-mini-task').addEventListener('click', function() {
+    const title = document.getElementById('mini-task-input').value.trim();
+    if (!title) return;
+
+    // Set due_date to today (local time) to sync to calendar
+    const tzoffset = (new Date()).getTimezoneOffset() * 60000;
+    const todayStr = (new Date(Date.now() - tzoffset)).toISOString().slice(0, 10);
+
+    const csrfToken = '{{ csrf_token }}';
+    fetch('/api/tasks/create/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ title: title, due_date: todayStr })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            const container = document.getElementById('mini-tasks-list');
+            if (container) {
+                const el = document.createElement('div');
+                el.id = `mini-task-row-${data.id}`;
+                el.className = 'flex items-center justify-between p-3 rounded-xl border border-slate-100 hover:border-amber-100 hover:bg-amber-50/30 transition-colors';
+                el.innerHTML = `
+                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                        <button id="mini-task-toggle-${data.id}" onclick="toggleTask(${data.id})" class="w-6 h-6 rounded-md border-2 border-slate-300 flex items-center justify-center text-white shrink-0 transition-all hover:border-amber-500 hover:bg-amber-50" aria-label="Toggle task ${data.title}"></button>
+                        <div class="min-w-0 flex-1">
+                            <p id="mini-task-title-${data.id}" class="text-sm font-medium text-slate-700 truncate transition-all">${data.title}</p>
+                        </div>
+                    </div>`;
+                container.prepend(el);
+                const emptyState = document.getElementById('mini-tasks-empty-state');
+                if (emptyState) emptyState.remove();
+                document.getElementById('mini-task-input').value = '';
+            }
+        } else {
+            alert(data.error || 'Could not create task.');
+        }
+    })
+    .catch(() => alert('Network error — task not created.'));
+});
+
+// Habits Handlers
 function toggleHabit(habitId) {
     const csrfToken = '{{ csrf_token }}';
     fetch(`/api/habits/${habitId}/toggle/`, {
@@ -195,11 +294,9 @@ function toggleHabit(habitId) {
     .then(res => res.json())
     .then(data => {
         if (data.success) {
-            // Update streak display
             const streakEl = document.getElementById(`streak-${habitId}`);
-            if (streakEl) streakEl.textContent = data.new_streak;
+            if (streakEl) streakEl.textContent = data.new_streak + ' 🔥';
 
-            // Visual feedback on button
             const btn = document.getElementById(`habit-toggle-${habitId}`);
             if (btn) {
                 btn.innerHTML = '<svg class="w-4 h-4 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>';
@@ -214,10 +311,9 @@ function toggleHabit(habitId) {
     })
     .catch(() => {});
 }
-// Create habit handler
+
 document.getElementById('btn-create-habit').addEventListener('click', function() {
     const name = document.getElementById('habit-name-input').value.trim();
-    const errBox = null;
     if (!name) return;
 
     const csrfToken = '{{ csrf_token }}';
@@ -232,63 +328,31 @@ document.getElementById('btn-create-habit').addEventListener('click', function()
     .then(res => res.json())
     .then(data => {
         if (data.success) {
-            // Prepend new habit to list
             const container = document.getElementById('habits-list');
-                if (container) {
+            if (container) {
                 const el = document.createElement('div');
                 el.id = `habit-row-${data.id}`;
-                el.className = 'flex items-center justify-between p-3 rounded-xl border border-slate-100 hover:border-teal-100 hover:bg-teal-50/30 transition-colors';
+                el.className = 'flex items-center justify-between p-2.5 rounded-xl border border-slate-100 hover:border-teal-100 hover:bg-teal-50/30 transition-colors';
                 el.innerHTML = `
-                    <div class="flex items-center gap-3 min-w-0">
-                        <button id="habit-toggle-${data.id}" onclick="toggleHabit(${data.id})" class="w-8 h-8 rounded-lg border-2 border-slate-200 flex items-center justify-center text-white shrink-0 transition-all hover:border-teal-500 hover:bg-teal-50" aria-label="Toggle habit ${data.name}"></button>
+                    <div class="flex items-center gap-2 min-w-0">
+                        <button id="habit-toggle-${data.id}" onclick="toggleHabit(${data.id})" class="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-white shrink-0 transition-all hover:border-teal-500 hover:bg-teal-50" aria-label="Toggle habit ${data.name}"></button>
                         <div class="min-w-0">
-                            <p class="text-sm font-medium text-slate-700 truncate">${data.name}</p>
-                            <p class="text-xs text-slate-400">Last: ${data.last_completed_date || 'Never'}</p>
+                            <p class="text-xs font-medium text-slate-700 truncate">${data.name}</p>
                         </div>
                     </div>
                     <div class="text-right shrink-0 ml-2">
-                        <p class="text-lg font-bold text-slate-900" id="streak-${data.id}">${data.current_streak}</p>
-                        <p class="text-xs text-amber-500 font-medium">🔥 streak</p>
-                    </div>
-                    <div class="shrink-0 ml-3">
-                        <button onclick="deleteHabit(${data.id})" class="text-xs text-red-500 hover:underline">Delete</button>
+                        <p class="text-sm font-bold text-slate-900" id="streak-${data.id}">${data.current_streak} 🔥</p>
                     </div>`;
                 container.prepend(el);
-                // Remove empty-state placeholder if present
                 const emptyState = document.getElementById('habits-empty-state');
                 if (emptyState) emptyState.remove();
                 document.getElementById('habit-name-input').value = '';
             }
         } else {
-            // Optionally show error
             alert(data.error || 'Could not create habit.');
         }
     })
-    .catch(() => {
-        alert('Network error — habit not created.');
-    });
+    .catch(() => alert('Network error — habit not created.'));
 });
-
-function deleteHabit(habitId){
-    if (!confirm('Delete this habit?')) return;
-    const csrfToken = '{{ csrf_token }}';
-    fetch(`/api/habits/${habitId}/delete/`, {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': csrfToken,
-            'Content-Type': 'application/json',
-        },
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success){
-            const row = document.getElementById(`habit-row-${habitId}`);
-            if (row) row.remove();
-        } else {
-            alert(data.error || 'Could not delete habit.');
-        }
-    })
-    .catch(()=> alert('Network error — could not delete habit.'));
-}
 </script>
 {% endblock %}
