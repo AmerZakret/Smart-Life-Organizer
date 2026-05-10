@@ -1,0 +1,179 @@
+{% extends 'base.html' %}
+{% block title %}Pomodoro Timer – Smart Life Organizer{% endblock %}
+{% block page_title %}Pomodoro{% endblock %}
+{% block page_subtitle %}Focus on your tasks with the Pomodoro technique{% endblock %}
+
+{% block content %}
+<div class="min-h-[80vh] flex flex-col justify-center space-y-12 py-10">
+    <!-- Timer Section (Top Center) -->
+    <div class="flex flex-col items-center">
+        <div class="bg-slate-900 rounded-[3rem] shadow-2xl border border-teal-500/10 p-12 max-w-md w-full text-center relative overflow-hidden">
+            <!-- Glassmorphism overlay -->
+            <div class="absolute inset-0 bg-gradient-to-br from-teal-500/5 to-transparent pointer-events-none"></div>
+            
+            <div class="absolute top-0 left-0 w-full h-1.5 bg-slate-800">
+                <div id="progress-bar" class="h-full bg-teal-500 shadow-[0_0_15px_rgba(20,184,166,0.5)] transition-all duration-1000" style="width: 0%"></div>
+            </div>
+            
+            <h2 id="timer-mode" class="text-xs font-black text-teal-500 uppercase tracking-[0.4em] mb-6 relative z-10">Focus Session</h2>
+            <div class="text-[7rem] font-black text-white tabular-nums tracking-tighter mb-10 selection:bg-teal-500/30 relative z-10" id="timer-display">
+                25:00
+            </div>
+            
+            <div class="flex items-center justify-center gap-6 relative z-10">
+                <button id="btn-toggle" class="bg-teal-600 hover:bg-teal-500 text-white font-black py-4 px-12 rounded-2xl shadow-lg shadow-teal-900/40 transition-all active:scale-95 w-40 uppercase tracking-widest text-xs">Start</button>
+                <button id="btn-reset" class="bg-slate-800 hover:bg-slate-700 text-slate-400 font-black py-4 px-12 rounded-2xl transition-all active:scale-95 w-40 uppercase tracking-widest text-xs">Reset</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Section: Focus & Motivation (Symmetrical Grid) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto w-full">
+        <!-- Focus Music Card -->
+        <div class="bg-slate-900 rounded-3xl shadow-xl border border-teal-500/10 p-8 flex flex-col h-full min-h-[320px]">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20">
+                    <svg class="w-6 h-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-sm font-black text-white uppercase tracking-widest">Focus Radio</h3>
+                    <p class="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">Live Lo-fi Beats</p>
+                </div>
+            </div>
+            <div class="flex-1 rounded-2xl overflow-hidden bg-black shadow-2xl relative group">
+                <iframe width="100%" height="100%" src="https://www.youtube.com/embed/jfKfPfyJRdk?controls=1&showinfo=0&rel=0&autoplay=0" title="Focus Radio" frameborder="0" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen class="absolute inset-0"></iframe>
+            </div>
+        </div>
+
+        <!-- Recent Sessions Card -->
+        <div class="bg-slate-900 rounded-3xl shadow-xl border border-teal-500/10 p-8 flex flex-col h-full min-h-[320px]">
+            <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-800">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-2xl bg-teal-500/10 flex items-center justify-center border border-teal-500/20">
+                        <svg class="w-6 h-6 text-teal-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-sm font-black text-white uppercase tracking-widest">Recent Activity</h3>
+                </div>
+                <div class="px-4 py-2 bg-teal-500/10 border border-teal-500/20 rounded-xl">
+                    <span class="text-xs font-black text-teal-400 uppercase tracking-tighter">{{ sessions_count }} Done</span>
+                </div>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto max-h-[180px] pr-2 space-y-3 custom-scrollbar" id="session-history">
+                {% for session in sessions %}
+                <div class="flex items-center justify-between p-4 rounded-2xl bg-slate-800/40 border border-slate-800 hover:border-teal-500/30 transition-all group">
+                    <div class="flex items-center gap-4">
+                        <div class="w-2.5 h-2.5 rounded-full bg-teal-500 shadow-[0_0_8px_rgba(20,184,166,0.5)]"></div>
+                        <p class="text-sm font-bold text-slate-300">Productive Session</p>
+                    </div>
+                    <p class="text-[10px] text-slate-500 font-black uppercase tracking-widest">{{ session.completed_at|time:"H:i" }}</p>
+                </div>
+                {% empty %}
+                <div class="flex flex-col items-center justify-center h-full text-center py-6">
+                    <p class="text-xs text-slate-500 font-bold uppercase tracking-widest italic">No activity recorded today</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #14b8a6; }
+</style>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    let focusTime = 25 * 60;
+    let breakTime = 5 * 60;
+    let timeLeft = focusTime;
+    let timerId = null;
+    let isRunning = false;
+    let isFocus = true;
+
+    const display = document.getElementById('timer-display');
+    const mode = document.getElementById('timer-mode');
+    const btnToggle = document.getElementById('btn-toggle');
+    const btnReset = document.getElementById('btn-reset');
+    const progressBar = document.getElementById('progress-bar');
+
+    function updateDisplay() {
+        const mins = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+        const secs = (timeLeft % 60).toString().padStart(2, '0');
+        display.textContent = `${mins}:${secs}`;
+        
+        const total = isFocus ? focusTime : breakTime;
+        const progress = ((total - timeLeft) / total) * 100;
+        progressBar.style.width = `${progress}%`;
+    }
+
+    function toggleTimer() {
+        if (isRunning) {
+            clearInterval(timerId);
+            btnToggle.textContent = 'Resume';
+            btnToggle.className = 'bg-teal-600 hover:bg-teal-700 text-white font-bold py-4 px-10 rounded-2xl shadow-lg shadow-teal-200 transition-all active:scale-95 w-36';
+        } else {
+            timerId = setInterval(() => {
+                timeLeft--;
+                updateDisplay();
+                if (timeLeft <= 0) {
+                    clearInterval(timerId);
+                    isRunning = false;
+                    
+                    if (isFocus) {
+                        recordSession();
+                    }
+                    
+                    isFocus = !isFocus;
+                    timeLeft = isFocus ? focusTime : breakTime;
+                    mode.textContent = isFocus ? 'Focus Session' : 'Short Break';
+                    mode.className = isFocus ? 'text-xs font-bold text-teal-600 uppercase tracking-[0.2em] mb-4' : 'text-xs font-bold text-blue-600 uppercase tracking-[0.2em] mb-4';
+                    btnToggle.textContent = 'Start';
+                    updateDisplay();
+                }
+            }, 1000);
+            btnToggle.textContent = 'Pause';
+            btnToggle.className = 'bg-amber-500 hover:bg-amber-600 text-white font-bold py-4 px-10 rounded-2xl shadow-lg shadow-amber-200 transition-all active:scale-95 w-36';
+        }
+        isRunning = !isRunning;
+    }
+
+    function resetTimer() {
+        clearInterval(timerId);
+        isRunning = false;
+        timeLeft = isFocus ? focusTime : breakTime;
+        updateDisplay();
+        btnToggle.textContent = 'Start';
+        btnToggle.className = 'bg-teal-600 hover:bg-teal-700 text-white font-bold py-4 px-10 rounded-2xl shadow-lg shadow-teal-200 transition-all active:scale-95 w-36';
+    }
+
+    function recordSession() {
+        const csrfToken = '{{ csrf_token }}';
+        fetch('{% url "api-complete-pomodoro" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                location.reload(); // Simple way to update history
+            }
+        });
+    }
+
+    btnToggle.addEventListener('click', toggleTimer);
+    btnReset.addEventListener('click', resetTimer);
+    updateDisplay();
+</script>
+{% endblock %}

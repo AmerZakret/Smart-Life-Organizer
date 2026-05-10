@@ -12,7 +12,8 @@ from django.views.decorators.http import require_GET, require_POST
 from icalendar import Calendar, Event as IcsEvent
 
 from ai_engine.models import AITip
-from .models import Category, Event, Habit
+from ai_engine.services import generate_dashboard_insight
+from .models import Category, Event, Habit, Task, PomodoroSession
 from .utils import expand_events_for_range
 
 logger = logging.getLogger(__name__)
@@ -25,39 +26,65 @@ logger = logging.getLogger(__name__)
 def dashboard(request):
     user_profile = request.user.userprofile
     today = timezone.now().date()
+    now = timezone.now()
 
     events_today = Event.objects.filter(
         user=user_profile,
         start_time__date=today,
     ).order_by("start_time")
 
-    habits = Habit.objects.filter(user=user_profile)
+    habits = Habit.objects.filter(user=user_profile).order_by("-id")
+    tasks = Task.objects.filter(user=user_profile, is_completed=False).order_by("-id")[:5]
 
-    active_tip = (
-        AITip.objects.filter(
-            event__user=user_profile,
-            event__start_time__gte=timezone.now(),
-            is_notified=False,
-        )
-        .select_related("event")
-        .first()
+    # Fetch next 48h events for the personalized tip
+    next_48h = now + timedelta(hours=48)
+    upcoming_events = Event.objects.filter(
+        user=user_profile,
+        start_time__gte=now,
+        start_time__lte=next_48h
+    ).order_by("start_time")[:5]  # Limit to 5 for context size
+
+    # Generate personalized dashboard insight
+    dashboard_tip = generate_dashboard_insight(
+        username=request.user.first_name or request.user.username,
+        events=list(upcoming_events),
+        habits=list(habits),
+        tone=user_profile.ai_tone
     )
 
-    # Plotly pie chart
-    # Use category explicit colors if available
-    categories_objects = [e.category for e in events_today if e.category]
-    if categories_objects:
-        cat_counts = {}
-        cat_colors = {}
-        for cat in categories_objects:
-            cat_counts[cat.name] = cat_counts.get(cat.name, 0) + 1
-            if cat.color:
-                cat_colors[cat.name] = cat.color
+    context = {
+        "events_today": events_today,
+        "habits": habits,
+        "tasks": tasks,
+        "dashboard_tip": dashboard_tip,
+        "categories": Category.objects.filter(user=user_profile).order_by("name"),
+    }
+    return render(request, "planner/dashboard.html", context)
 
-        # If any category lacks a color or default is needed
+@login_required
+def analytics(request):
+    user_profile = request.user.userprofile
+    today = timezone.now().date()
+    seven_days_ago = today - timedelta(days=7)
+
+    # All events for today
+    events_today = Event.objects.filter(
+        user=user_profile,
+        start_time__date=today,
+    ).order_by("start_time")
+
+    # Category counts for today's chart
+    cat_counts = {}
+    cat_colors = {}
+    categories_objects = [e.category for e in events_today if e.category]
+    for cat in categories_objects:
+        cat_counts[cat.name] = cat_counts.get(cat.name, 0) + 1
+        if cat.color:
+            cat_colors[cat.name] = cat.color
+
+    if cat_counts:
         names = list(cat_counts.keys())
         values = list(cat_counts.values())
-
         fig = px.pie(
             names=names,
             values=values,
@@ -68,58 +95,216 @@ def dashboard(request):
             margin=dict(l=0, r=0, t=40, b=0),
             paper_bgcolor="rgba(0,0,0,0)",
             font=dict(family="Inter, sans-serif", size=12),
+            title_text=""
         )
-        # remove duplicate title inside chart (page already shows a section heading)
-        fig.update_layout(title_text="")
         chart_html = fig.to_html(full_html=False, include_plotlyjs="cdn")
     else:
         chart_html = ""
 
+    # Top Categories (Full dataset)
+    all_categories = Category.objects.filter(user=user_profile)
+    top_categories_data = []
+    total_events = Event.objects.filter(user=user_profile).count()
+    
+    for cat in all_categories:
+        count = Event.objects.filter(user=user_profile, category=cat).count()
+        if count > 0:
+            percentage = (count / total_events * 100) if total_events > 0 else 0
+            top_categories_data.append({
+                "name": cat.name,
+                "count": count,
+                "percentage": int(percentage),
+                "color": cat.color
+            })
+    top_categories_data = sorted(top_categories_data, key=lambda x: x["count"], reverse=True)[:5]
+
+    # Weekly Activity (Heatmap data)
+    weekly_activity = []
+    for i in range(7):
+        day = today - timedelta(days=i)
+        count = Event.objects.filter(user=user_profile, start_time__date=day).count()
+        weekly_activity.append({
+            "day": day.strftime("%a"),
+            "date": day,
+            "count": count
+        })
+    weekly_activity.reverse()
+
     context = {
-        "events_today": events_today,
-        "habits": habits,
-        "active_tip": active_tip,
         "chart_html": chart_html,
+        "events_today_count": events_today.count(),
+        "top_categories": top_categories_data,
+        "weekly_activity": weekly_activity,
+        "max_activity": max([d["count"] for d in weekly_activity]) if weekly_activity else 0
     }
-    return render(request, "planner/dashboard.html", context)
+    return render(request, "planner/analytics.html", context)
+
+
+@login_required
+def growth_view(request):
+    user_profile = request.user.userprofile
+    habits = Habit.objects.filter(user=user_profile).order_by("-id")
+    tasks = Task.objects.filter(user=user_profile).order_by("-id")
+    return render(request, "planner/growth.html", {
+        "habits": habits,
+        "tasks": tasks,
+        "categories": Category.objects.filter(user=user_profile).order_by("name"),
+    })
+
+@login_required
+def habits(request):
+    return redirect("growth")
+
+@login_required
+def todo(request):
+    return redirect("growth")
+
+@login_required
+def pomodoro_view(request):
+    user_profile = request.user.userprofile
+    today = timezone.now().date()
+    sessions = PomodoroSession.objects.filter(
+        user=user_profile,
+        completed_at__date=today
+    ).order_by("-completed_at")
+    
+    return render(request, "planner/pomodoro.html", {
+        "sessions": sessions,
+        "sessions_count": sessions.count()
+    })
+
+@login_required
+@require_POST
+def api_complete_pomodoro(request):
+    user_profile = request.user.userprofile
+    PomodoroSession.objects.create(user=user_profile, duration_minutes=25)
+    return JsonResponse({"success": True})
 
 
 @login_required
 def calendar(request):
     user_profile = request.user.userprofile
-    # Show events for the next 30 days (expand recurring events)
-    from django.utils import timezone
-    from collections import OrderedDict
 
-    now = timezone.now()
-    window_end = now + timezone.timedelta(days=30)
-
-    events_qs = Event.objects.filter(user=user_profile).select_related("aitip")
-    occurrences = expand_events_for_range(events_qs, now, window_end)
-
-    # Group occurrences by date for vertical day-by-day layout
-    days_dict = OrderedDict()
-    for occ in occurrences:
-        day = occ["start_time"].date()
-        if day not in days_dict:
-            days_dict[day] = []
-        days_dict[day].append(occ)
-
-    days_grouped = [{"date": day, "events": evts} for day, evts in days_dict.items()]
-
-    today = now.date()
-    tomorrow = today + timedelta(days=1)
-
-    # provide user's categories to the template for dynamic select
+    # provide user's categories to the template for dynamic select & legend
     categories = Category.objects.filter(user=user_profile).order_by("name")
+    categories_json = json.dumps(
+        [{"name": c.name, "color": c.color} for c in categories]
+    )
+
+    # AI tips for the sidebar
+    ai_tips = (
+        AITip.objects.filter(
+            event__user=user_profile,
+            event__start_time__gte=timezone.now(),
+        )
+        .select_related("event", "event__category")
+        .order_by("event__start_time")[:8]
+    )
+
     context = {
-        "events": occurrences,
-        "days_grouped": days_grouped,
-        "today": today,
-        "tomorrow": tomorrow,
         "categories": categories,
+        "categories_json": categories_json,
+        "ai_tips": ai_tips,
     }
     return render(request, "planner/calendar.html", context)
+
+
+@login_required
+@require_GET
+def api_events_feed(request):
+    """GET /api/events/feed/?start=...&end=...
+
+    Returns events in FullCalendar-compatible JSON format.
+    FullCalendar automatically appends `start` and `end` ISO date params.
+    """
+    user_profile = request.user.userprofile
+
+    start_raw = request.GET.get("start", "")
+    end_raw = request.GET.get("end", "")
+
+    from django.utils.dateparse import parse_datetime, parse_date
+
+    start_dt = None
+    end_dt = None
+
+    # FullCalendar sends ISO dates like "2026-05-01" or datetimes
+    if start_raw:
+        start_dt = parse_datetime(start_raw) or (
+            timezone.make_aware(timezone.datetime.combine(parse_date(start_raw), timezone.datetime.min.time()))
+            if parse_date(start_raw)
+            else None
+        )
+    if end_raw:
+        end_dt = parse_datetime(end_raw) or (
+            timezone.make_aware(timezone.datetime.combine(parse_date(end_raw), timezone.datetime.max.time()))
+            if parse_date(end_raw)
+            else None
+        )
+
+    if not start_dt or not end_dt:
+        now = timezone.now()
+        start_dt = start_dt or (now - timedelta(days=30))
+        end_dt = end_dt or (now + timedelta(days=60))
+
+    if timezone.is_naive(start_dt):
+        start_dt = timezone.make_aware(start_dt)
+    if timezone.is_naive(end_dt):
+        end_dt = timezone.make_aware(end_dt)
+
+    events_qs = Event.objects.filter(user=user_profile).select_related("category")
+    occurrences = expand_events_for_range(events_qs, start_dt, end_dt)
+
+    fc_events = []
+    for occ in occurrences:
+        cat = occ.get("category")
+        color = cat.color if cat and cat.color else "#94a3b8"
+        fc_events.append(
+            {
+                "id": occ["event"].pk,
+                "title": occ["title"],
+                "start": occ["start_time"].isoformat(),
+                "end": occ["end_time"].isoformat(),
+                "color": color,
+                "textColor": "#ffffff",
+                "extendedProps": {
+                    "category": cat.name if cat else "",
+                    "categoryColor": color,
+                    "description": occ.get("description", ""),
+                    "isRecurring": bool(occ["event"].rrule),
+                    "originalStart": (
+                        occ["original_start"].isoformat()
+                        if occ.get("original_start")
+                        else None
+                    ),
+                    "isCompleted": occ["event"].is_completed,
+                },
+            }
+        )
+
+    # Add Tasks that have due dates to the Calendar
+    tasks_qs = Task.objects.filter(
+        user=user_profile, 
+        due_date__isnull=False,
+        due_date__gte=start_dt,
+        due_date__lt=end_dt
+    )
+    for task in tasks_qs:
+        fc_events.append(
+            {
+                "id": f"task_{task.id}",
+                "title": f"📝 {task.title}",
+                "start": task.due_date.isoformat(),
+                "allDay": True,
+                "color": "#f59e0b",  # Amber/Yellow for tasks
+                "textColor": "#ffffff",
+                "extendedProps": {
+                    "isTask": True,
+                    "isCompleted": task.is_completed,
+                },
+            }
+        )
+
+    return JsonResponse(fc_events, safe=False)
 
 
 @login_required
@@ -244,6 +429,10 @@ def api_create_event(request):
     category_obj, created = Category.objects.get_or_create(
         user=user_profile, name=category, defaults={"color": category_color}
     )
+    # Update color on existing category if user picked a custom color
+    if not created and category_color and category_color != "#0d9488":
+        category_obj.color = category_color
+        category_obj.save(update_fields=["color"])
 
     event = Event.objects.create(
         user=user_profile,
@@ -762,3 +951,65 @@ def api_edit_event(request, event_id):
 
     event.save()
     return JsonResponse({"success": True, "updated_occurrence": False})
+
+
+@require_POST
+@login_required
+def api_create_task(request):
+    try:
+        data = json.loads(request.body)
+        title = data.get("title", "").strip()
+        due_date_raw = data.get("due_date", "")
+        if not title:
+            return JsonResponse({"success": False, "error": "Title required."})
+            
+        due_date = None
+        if due_date_raw:
+            from django.utils.dateparse import parse_datetime, parse_date
+            due_date = parse_datetime(due_date_raw) or (
+                timezone.make_aware(timezone.datetime.combine(parse_date(due_date_raw), timezone.datetime.min.time()))
+                if parse_date(due_date_raw)
+                else None
+            )
+            if due_date and timezone.is_naive(due_date):
+                due_date = timezone.make_aware(due_date)
+
+        task = Task.objects.create(
+            user=request.user.userprofile,
+            title=title,
+            due_date=due_date
+        )
+        return JsonResponse({
+            "success": True, 
+            "id": task.id, 
+            "title": task.title,
+            "is_completed": task.is_completed,
+            "due_date": task.due_date.isoformat() if task.due_date else None
+        })
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)})
+
+@require_POST
+@login_required
+def api_toggle_task(request, task_id):
+    try:
+        task = Task.objects.get(id=task_id, user=request.user.userprofile)
+        task.is_completed = not task.is_completed
+        task.save()
+        return JsonResponse({"success": True, "is_completed": task.is_completed})
+    except Task.DoesNotExist:
+        return JsonResponse({"success": False, "error": "Task not found."})
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)})
+
+@require_POST
+@login_required
+def api_delete_task(request, task_id):
+    try:
+        task = Task.objects.get(id=task_id, user=request.user.userprofile)
+        task.delete()
+        return JsonResponse({"success": True})
+    except Task.DoesNotExist:
+        return JsonResponse({"success": False, "error": "Task not found."})
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)})

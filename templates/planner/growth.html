@@ -1,0 +1,220 @@
+{% extends 'base.html' %}
+{% block title %}Growth – Smart Life Organizer{% endblock %}
+{% block page_title %}Growth Center{% endblock %}
+{% block page_subtitle %}Manage your tasks and build consistent habits in one place.{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        
+        <!-- Full-Scale To-Do Management -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex flex-col">
+            <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
+                        <svg class="w-6 h-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+                        </svg>
+                    </div>
+                    <h2 class="text-lg font-bold text-slate-800">Task Management</h2>
+                </div>
+                <span class="text-xs font-bold text-slate-400 bg-slate-50 px-3 py-1 rounded-full uppercase tracking-widest">{{ tasks.count }} Active</span>
+            </div>
+
+            <div class="mb-6">
+                <form id="create-task-form" class="flex gap-3">
+                    <input id="task-title-input" type="text" placeholder="What needs to be done?"
+                        class="flex-1 px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                    <button id="btn-create-task" type="button" class="px-6 py-3 rounded-xl bg-teal-600 hover:bg-teal-700 transition-colors text-white text-sm font-bold shadow-sm">Add Task</button>
+                </form>
+            </div>
+
+            <div class="space-y-3 overflow-y-auto max-h-[600px] pr-2" id="tasks-list">
+                {% for task in tasks %}
+                <div class="flex items-center justify-between p-4 rounded-xl border border-slate-100 hover:border-teal-100 hover:bg-slate-50 transition-colors group"
+                     id="task-row-{{ task.id }}">
+                    <div class="flex items-center gap-4 min-w-0 flex-1">
+                        <button id="task-toggle-{{ task.id }}"
+                            onclick="toggleTask({{ task.id }})"
+                            class="w-6 h-6 rounded-md border-2 border-slate-300 flex items-center justify-center text-white shrink-0 transition-all hover:border-teal-500 hover:bg-teal-50 {% if task.is_completed %}bg-teal-500 border-teal-500{% endif %}"
+                            aria-label="Toggle task {{ task.title }}">
+                            {% if task.is_completed %}
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                            {% endif %}
+                        </button>
+                        <div class="min-w-0 flex-1">
+                            <p id="task-title-{{ task.id }}" class="text-base font-semibold text-slate-800 truncate transition-all {% if task.is_completed %}line-through text-slate-400{% endif %}">{{ task.title }}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4 shrink-0 pl-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onclick="deleteTask({{ task.id }})" class="text-xs font-bold text-slate-400 hover:text-red-600 px-2 py-1 rounded transition-colors uppercase tracking-tighter">Delete</button>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-12" id="tasks-empty-state">
+                    <p class="text-sm text-slate-400">Your to-do list is empty. Time to relax or start fresh!</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Full-Scale Habit Tracking -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex flex-col">
+            <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center">
+                        <svg class="w-6 h-6 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                    </div>
+                    <h2 class="text-lg font-bold text-slate-800">Habit Tracker</h2>
+                </div>
+                <span class="text-xs font-bold text-slate-400 bg-slate-50 px-3 py-1 rounded-full uppercase tracking-widest">{{ habits.count }} Active</span>
+            </div>
+
+            <div class="mb-6">
+                <form id="create-habit-form" class="flex gap-3">
+                    <input id="habit-name-input" type="text" placeholder="New habit (e.g., Read 30m)"
+                        class="flex-1 px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                    <button id="btn-create-habit" type="button" class="px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 transition-colors text-white text-sm font-bold shadow-sm">Add Habit</button>
+                </form>
+            </div>
+
+            <div class="space-y-3 overflow-y-auto max-h-[600px] pr-2" id="habits-list">
+                {% for habit in habits %}
+                <div class="flex items-center justify-between p-4 rounded-xl border border-slate-100 hover:border-teal-100 hover:bg-teal-50/30 transition-colors group"
+                     id="habit-row-{{ habit.id }}">
+                    <div class="flex items-center gap-4 min-w-0">
+                        <button id="habit-toggle-{{ habit.id }}"
+                            onclick="toggleHabit({{ habit.id }})"
+                            class="w-10 h-10 rounded-xl border-2 border-slate-200 flex items-center justify-center text-white shrink-0 transition-all hover:border-teal-500 hover:bg-teal-50"
+                            aria-label="Toggle habit {{ habit.name }}">
+                        </button>
+                        <div class="min-w-0">
+                            <p class="text-base font-semibold text-slate-800 truncate">{{ habit.name }}</p>
+                            <p class="text-xs text-slate-400 mt-0.5">Last: {{ habit.last_completed_date|default:"Never" }}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-6">
+                        <div class="text-right shrink-0">
+                            <p class="text-2xl font-bold text-slate-900 leading-none" id="streak-{{ habit.id }}">{{ habit.current_streak }}</p>
+                            <p class="text-[10px] text-amber-500 font-bold tracking-widest uppercase mt-1">Streak 🔥</p>
+                        </div>
+                        <button onclick="deleteHabit({{ habit.id }})" class="opacity-0 group-hover:opacity-100 text-xs font-bold text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-2 rounded-lg transition-all shrink-0 uppercase">Delete</button>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-12" id="habits-empty-state">
+                    <p class="text-sm text-slate-400">Start small. Add a new habit above!</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// TASK LOGIC
+function toggleTask(taskId) {
+    const csrfToken = '{{ csrf_token }}';
+    fetch(`/api/tasks/${taskId}/toggle/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/json' },
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            const btn = document.getElementById(`task-toggle-${taskId}`);
+            const title = document.getElementById(`task-title-${taskId}`);
+            if (data.is_completed) {
+                btn.innerHTML = '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>';
+                btn.classList.add('bg-teal-500', 'border-teal-500');
+                title.classList.add('line-through', 'text-slate-400');
+            } else {
+                btn.innerHTML = '';
+                btn.classList.remove('bg-teal-500', 'border-teal-500');
+                title.classList.remove('line-through', 'text-slate-400');
+            }
+        }
+    });
+}
+
+document.getElementById('btn-create-task').addEventListener('click', function() {
+    const title = document.getElementById('task-title-input').value.trim();
+    if (!title) return;
+    const csrfToken = '{{ csrf_token }}';
+    fetch('/api/tasks/create/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) location.reload();
+    });
+});
+
+function deleteTask(taskId){
+    if(!confirm('Delete task?')) return;
+    const csrfToken = '{{ csrf_token }}';
+    fetch(`/api/tasks/${taskId}/delete/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/json' },
+    })
+    .then(res => res.json())
+    .then(data => { if(data.success) document.getElementById(`task-row-${taskId}`).remove(); });
+}
+
+// HABIT LOGIC
+function toggleHabit(habitId) {
+    const csrfToken = '{{ csrf_token }}';
+    fetch(`/api/habits/${habitId}/toggle/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/json' },
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            const streakEl = document.getElementById(`streak-${habitId}`);
+            if (streakEl) streakEl.textContent = data.new_streak;
+            const btn = document.getElementById(`habit-toggle-${habitId}`);
+            if (btn) {
+                btn.innerHTML = '<svg class="w-5 h-5 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>';
+                btn.classList.add('bg-teal-50', 'border-teal-500');
+                setTimeout(() => {
+                    btn.innerHTML = '';
+                    btn.classList.remove('bg-teal-50', 'border-teal-500');
+                    btn.classList.add('border-slate-200');
+                }, 1500);
+            }
+        }
+    });
+}
+
+document.getElementById('btn-create-habit').addEventListener('click', function() {
+    const name = document.getElementById('habit-name-input').value.trim();
+    if (!name) return;
+    const csrfToken = '{{ csrf_token }}';
+    fetch('/api/habits/create/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name })
+    })
+    .then(res => res.json())
+    .then(data => { if (data.success) location.reload(); });
+});
+
+function deleteHabit(habitId){
+    if (!confirm('Delete this habit permanently?')) return;
+    const csrfToken = '{{ csrf_token }}';
+    fetch(`/api/habits/${habitId}/delete/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/json' },
+    })
+    .then(res => res.json())
+    .then(data => { if(data.success) document.getElementById(`habit-row-${habitId}`).remove(); });
+}
+</script>
+{% endblock %}

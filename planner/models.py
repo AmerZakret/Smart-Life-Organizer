@@ -78,3 +78,21 @@ class EventException(models.Model):
 
     def __str__(self):
         return f"Exception for {self.event.title} @ {self.original_start.isoformat()}"
+
+
+class Task(models.Model):
+    user = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
+    title = models.CharField(max_length=200)
+    is_completed = models.BooleanField(default=False)
+    due_date = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.title
+class PomodoroSession(models.Model):
+    user = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
+    completed_at = models.DateTimeField(auto_now_add=True)
+    duration_minutes = models.IntegerField(default=25)
+
+    def __str__(self):
+        return f"{self.user.user.username} - {self.completed_at}"

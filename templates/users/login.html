@@ -5,11 +5,13 @@
     <div class="w-full max-w-md space-y-6">
         <div class="text-center">
             <div class="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-teal-600 mb-4 shadow-lg">
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7 text-white" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M11.25 4.533A9.707 9.707 0 006 3a9.735 9.735 0 00-3.25.555.75.75 0 00-.5.707v14.25a.75.75 0 001 .707A8.237 8.237 0 016 18.75c1.995 0 3.823.707 5.25 1.878V4.533zM12.75 20.628A8.244 8.244 0 0118 18.75c.966 0 1.89.166 2.75.47a.75.75 0 001-.708V4.262a.75.75 0 00-.5-.707A9.735 9.735 0 0018 3a9.707 9.707 0 00-5.25 1.533v16.095z"/>
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7 text-white" viewBox="0 0 24 24"
+                    fill="currentColor">
+                    <path
+                        d="M11.25 4.533A9.707 9.707 0 006 3a9.735 9.735 0 00-3.25.555.75.75 0 00-.5.707v14.25a.75.75 0 001 .707A8.237 8.237 0 016 18.75c1.995 0 3.823.707 5.25 1.878V4.533zM12.75 20.628A8.244 8.244 0 0118 18.75c.966 0 1.89.166 2.75.47a.75.75 0 001-.708V4.262a.75.75 0 00-.5-.707A9.735 9.735 0 0018 3a9.707 9.707 0 00-5.25 1.533v16.095z" />
                 </svg>
             </div>
-            <h1 class="text-2xl font-bold text-slate-900">Welcome back</h1>
+            <h1 class="text-2xl font-bold text-slate-900">Welcome to Muhammad's Organizer</h1>
             <p class="text-slate-500 text-sm mt-1">Sign in to Smart Life Organizer</p>
         </div>
         <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-8 space-y-5">
@@ -18,11 +20,12 @@
                 <input type="hidden" name="next" value="{{ next }}">
                 {% for field in form %}
                 <div>
-                    <label for="{{ field.id_for_label }}" class="block text-xs font-medium text-slate-700 mb-1.5">{{ field.label }}</label>
-                    <input id="{{ field.id_for_label }}" type="{{ field.field.widget.input_type }}" name="{{ field.html_name }}"
-                        class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder-slate-400
+                    <label for="{{ field.id_for_label }}" class="block text-xs font-medium text-slate-700 mb-1.5">{{
+                        field.label }}</label>
+                    <input id="{{ field.id_for_label }}" type="{{ field.field.widget.input_type }}"
+                        name="{{ field.html_name }}" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder-slate-400
                                focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition"
-                        {% if field.value %}value="{{ field.value }}"{% endif %}>
+                        {% if field.value %}value="{{ field.value }}" {% endif %}>
                     {% for error in field.errors %}
                     <p class="text-red-500 text-xs mt-1">{{ error }}</p>
                     {% endfor %}

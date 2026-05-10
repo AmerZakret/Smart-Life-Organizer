@@ -1,472 +1,281 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Calendar – Smart Life Organizer{% endblock %}
 {% block page_title %}Calendar{% endblock %}
 {% block page_subtitle %}Manage and browse all your events{% endblock %}
 
 {% block extra_head %}
+<!-- FullCalendar v6 CDN -->
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+
 <style>
-    .day-group + .day-group { margin-top: 0; }
-    .event-card {
-        transition: transform 0.15s ease, box-shadow 0.15s ease;
-    }
-    .event-card:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-    }
-    .today-marker {
-        background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
-        color: white;
-    }
-    .time-pill {
-        font-variant-numeric: tabular-nums;
-    }
+/* ── FullCalendar Theming ── */
+:root { --fc-border-color: #e2e8f0; --fc-today-bg-color: #f0fdfa; --fc-neutral-bg-color: #f8fafc; }
+.fc { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; font-size: 0.85rem; }
+.fc .fc-toolbar { padding: 0 0 1rem 0; flex-wrap: wrap; gap: 0.5rem; }
+.fc .fc-toolbar-title { font-size: 1.25rem; font-weight: 700; color: #0f172a; }
+.fc .fc-button { background: #f1f5f9; border: 1px solid #e2e8f0; color: #334155; font-weight: 600;
+  border-radius: 0.625rem; padding: 0.4rem 0.9rem; font-size: 0.8rem; text-transform: capitalize;
+  transition: all 0.15s ease; box-shadow: none; }
+.fc .fc-button:hover { background: #e2e8f0; color: #0f172a; }
+.fc .fc-button-active, .fc .fc-button:active { background: #0d9488 !important; border-color: #0d9488 !important;
+  color: #fff !important; box-shadow: 0 2px 8px rgba(13,148,136,0.25); }
+.fc .fc-button-primary:disabled { opacity: 0.4; }
+.fc .fc-button-group { border-radius: 0.625rem; overflow: hidden; }
+.fc .fc-button-group .fc-button { border-radius: 0; }
+.fc .fc-button-group .fc-button:first-child { border-radius: 0.625rem 0 0 0.625rem; }
+.fc .fc-button-group .fc-button:last-child { border-radius: 0 0.625rem 0.625rem 0; }
+.fc .fc-col-header-cell { background: #f8fafc; padding: 0.6rem 0; }
+.fc .fc-col-header-cell-cushion { color: #64748b; font-weight: 600; font-size: 0.75rem; text-transform: uppercase;
+  letter-spacing: 0.05em; text-decoration: none; }
+.fc .fc-daygrid-day-number { color: #475569; font-weight: 500; padding: 0.4rem 0.6rem; font-size: 0.82rem;
+  text-decoration: none; }
+.fc .fc-day-today .fc-daygrid-day-number { background: #0d9488; color: #fff; border-radius: 50%; width: 1.8rem;
+  height: 1.8rem; display: flex; align-items: center; justify-content: center; margin: 0.25rem; padding: 0; font-weight: 700; }
+.fc .fc-daygrid-event { border-radius: 0.375rem; border: none; padding: 1px 4px; font-size: 0.75rem;
+  font-weight: 600; cursor: pointer; transition: transform 0.1s, box-shadow 0.1s; }
+.fc .fc-daygrid-event:hover { transform: translateY(-1px); box-shadow: 0 3px 10px rgba(0,0,0,0.1); }
+.fc .fc-timegrid-event { border-radius: 0.375rem; border: none; border-left: 3px solid rgba(255,255,255,0.5);
+  font-size: 0.75rem; font-weight: 600; cursor: pointer; }
+.fc .fc-timegrid-slot-label-cushion { font-size: 0.7rem; color: #94a3b8; font-weight: 500; }
+.fc .fc-timegrid-now-indicator-line { border-color: #ef4444; border-width: 2px; }
+.fc .fc-timegrid-now-indicator-arrow { border-color: #ef4444; }
+.fc .fc-highlight { background: rgba(13,148,136,0.1); }
+.fc .fc-daygrid-day:hover { background: #f8fafc; }
+.fc td, .fc th { border-color: #e2e8f0; }
+.fc .fc-scrollgrid { border-radius: 0.75rem; overflow: hidden; border: 1px solid #e2e8f0; }
+
+/* Quick Add & popovers */
+.animate-pop { animation: popIn 0.15s ease-out; }
+@keyframes popIn { from { opacity: 0; transform: scale(0.95) translateY(-4px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+
+/* Category legend */
+.cat-legend { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.cat-pill { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.65rem;
+  border-radius: 9999px; font-size: 0.7rem; font-weight: 600; border: 1px solid transparent; }
+
+/* Color picker circles */
+.color-circle { width: 24px; height: 24px; border-radius: 50%; cursor: pointer; border: 2px solid transparent;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  flex-shrink: 0; }
+.color-circle:hover { transform: scale(1.18); box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+.color-circle.selected { border-color: #0f172a; box-shadow: 0 0 0 2px rgba(15,23,42,0.15); transform: scale(1.12); }
+
+/* Category dropdown with dot */
+.cat-option-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="space-y-4">
-
+<div class="grid grid-cols-1 gap-6 items-start">
+  <!-- Main Calendar Content (Full Width) -->
+  <div class="space-y-4">
     <!-- Action bar -->
-    <div class="flex items-center justify-between">
-        <p class="text-sm text-slate-500">
-            Your upcoming events, organized by day.
-        </p>
-        <button id="btn-open-event-modal"
-            onclick="document.getElementById('event-modal').classList.remove('hidden')"
-            class="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl shadow-sm transition-colors">
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
-            </svg>
-            New Event
-        </button>
+    <div class="flex items-center justify-between flex-wrap gap-3">
+      <div class="cat-legend">
+        {% for cat in categories %}
+        <span class="cat-pill" style="background:{{ cat.color }}18;color:{{ cat.color }};border-color:{{ cat.color }}30;">
+          <span class="w-2 h-2 rounded-full" style="background:{{ cat.color }}"></span>
+          {{ cat.name }}
+        </span>
+        {% empty %}
+        <span class="text-xs text-slate-400">No categories yet</span>
+        {% endfor %}
+      </div>
+      <button id="btn-open-event-modal"
+        class="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl shadow-sm transition-colors">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+        </svg>
+        New Event
+      </button>
     </div>
 
-    <!-- Calendar: Vertical Day-by-Day Timeline -->
-    <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-        {% if days_grouped %}
-        <div id="events-container" class="divide-y divide-slate-100">
-            {% for day in days_grouped %}
-            <div class="day-group" id="day-{{ day.date|date:'Y-m-d' }}">
-                <!-- Day Header -->
-                <div class="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-sm border-b border-slate-100 px-5 py-3 flex items-center gap-3">
-                    <div class="w-12 h-12 rounded-xl flex flex-col items-center justify-center shrink-0
-                        {% if day.date == today %}today-marker{% else %}bg-white border border-slate-200 text-slate-700{% endif %}">
-                        <span class="text-lg font-bold leading-none">{{ day.date|date:"d" }}</span>
-                        <span class="text-[10px] font-semibold uppercase tracking-wide {% if day.date == today %}text-teal-100{% else %}text-slate-400{% endif %}">{{ day.date|date:"M" }}</span>
-                    </div>
-                    <div>
-                        <p class="text-sm font-semibold {% if day.date == today %}text-teal-700{% else %}text-slate-800{% endif %}">
-                            {% if day.date == today %}Today
-                            {% elif day.date == tomorrow %}Tomorrow
-                            {% else %}{{ day.date|date:"l" }}{% endif %}
-                        </p>
-                        <p class="text-xs text-slate-400">{{ day.date|date:"F j, Y" }} · {{ day.events|length }} event{{ day.events|length|pluralize }}</p>
-                    </div>
-                </div>
-
-                <!-- Events for this day -->
-                <div class="divide-y divide-slate-50">
-                    {% for occ in day.events %}
-                    <div class="event-card flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50/60 transition-colors group"
-                         data-event-id="{{ occ.event.pk }}">
-                        <!-- Time Column -->
-                        <div class="shrink-0 w-20 text-right">
-                            <p class="time-pill text-xs font-semibold text-slate-600">{{ occ.start_time|time:"H:i" }}</p>
-                            <p class="time-pill text-[11px] text-slate-300 mt-0.5">{{ occ.end_time|time:"H:i" }}</p>
-                        </div>
-
-                        <!-- Color accent bar -->
-                        <div class="w-1 self-stretch rounded-full shrink-0"
-                             style="background-color: {% if occ.category and occ.category.color %}{{ occ.category.color }}{% else %}#94a3b8{% endif %};"></div>
-
-                        <!-- Event Details -->
-                        <div class="flex-1 min-w-0">
-                            <p class="text-sm font-semibold text-slate-800 truncate {{ occ.event.is_completed|yesno:'line-through text-slate-400,' }}">
-                                {{ occ.title }}
-                            </p>
-                            <div class="flex items-center gap-2 mt-1 flex-wrap">
-                                {% if occ.category %}
-                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium"
-                                      style="background-color: {% if occ.category.color %}{{ occ.category.color }}18{% else %}#f1f5f9{% endif %}; color: {% if occ.category.color %}{{ occ.category.color }}{% else %}#64748b{% endif %};">
-                                    <span class="w-1.5 h-1.5 rounded-full" style="background-color: {% if occ.category.color %}{{ occ.category.color }}{% else %}#94a3b8{% endif %};"></span>
-                                    {{ occ.category.name }}
-                                </span>
-                                {% endif %}
-                                {% if occ.event.rrule %}
-                                <span class="inline-flex items-center px-1.5 py-0.5 rounded-md text-[11px] font-medium bg-amber-50 text-amber-600">
-                                    ↻ Recurring
-                                </span>
-                                {% endif %}
-                                {% if occ.event.is_completed %}
-                                <span class="inline-flex items-center px-1.5 py-0.5 rounded-md text-[11px] font-medium bg-teal-50 text-teal-600">✓ Done</span>
-                                {% endif %}
-                            </div>
-                            {% if occ.description %}
-                            <p class="text-xs text-slate-400 truncate mt-1">{{ occ.description }}</p>
-                            {% endif %}
-                        </div>
-
-                        <!-- AI tip indicator -->
-                        {% if occ.event.aitip %}
-                        <div class="shrink-0 cursor-pointer hover:scale-110 transition-transform" 
-                             title="Click to see AI Tip"
-                             onclick="showTip('{{ occ.event.aitip.tip_text|escapejs }}', '{{ occ.event.title|escapejs }}')">
-                            <span class="w-8 h-8 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center text-sm shadow-sm border border-teal-100">💡</span>
-                        </div>
-                        {% endif %}
-
-                        <!-- Delete button -->
-                        <div class="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onclick="handleDeleteClick(this)"
-                                data-event-id="{{ occ.event.pk }}"
-                                data-recurring="{% if occ.event.rrule %}true{% else %}false{% endif %}"
-                                data-original-start="{% if occ.original_start %}{{ occ.original_start|date:'c' }}{% else %}{% endif %}"
-                                class="text-xs text-red-400 hover:text-red-600 font-medium transition-colors">Delete</button>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-        {% else %}
-        <div class="text-center py-20">
-            <svg class="w-14 h-14 text-slate-200 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-            </svg>
-            <p class="text-sm font-medium text-slate-400">No events yet</p>
-            <p class="text-xs text-slate-300 mt-1">Click "New Event" to get started.</p>
-        </div>
-        {% endif %}
+    <!-- Calendar container -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 md:p-6">
+      <form style="display:none">{% csrf_token %}</form>
+      <div id="fullcalendar"></div>
     </div>
+  </div>
+
+  </div>
 </div>
 
-<!-- ── Event Creation Modal ── -->
-<div id="event-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
-    <!-- Backdrop -->
-    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="document.getElementById('event-modal').classList.add('hidden')"></div>
-
-    <!-- Dialog -->
-    <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-5 z-10">
-        <div class="flex items-center justify-between">
-            <div>
-                <h3 class="text-base font-semibold text-slate-900">Create New Event</h3>
-                <p class="text-xs text-slate-400 mt-0.5">Fill in the details below</p>
-            </div>
-            <button id="btn-close-event-modal"
-                onclick="document.getElementById('event-modal').classList.add('hidden')"
-                class="text-slate-300 hover:text-slate-600 transition-colors text-2xl leading-none">&times;</button>
-        </div>
-
-        <form id="create-event-form" class="space-y-4" novalidate>
-            {% csrf_token %}
-            <div>
-                <label for="event-title" class="block text-xs font-medium text-slate-700 mb-1.5">Title <span class="text-red-400">*</span></label>
-                <input id="event-title" type="text" name="title" required placeholder="e.g. Team standup"
-                    class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder-slate-400
-                           focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition">
-            </div>
-            <div>
-                <label for="event-description" class="block text-xs font-medium text-slate-700 mb-1.5">Description</label>
-                <textarea id="event-description" name="description" rows="2" placeholder="Optional notes..."
-                    class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder-slate-400
-                           focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition resize-none"></textarea>
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label for="event-start" class="block text-xs font-medium text-slate-700 mb-1.5">Start <span class="text-red-400">*</span></label>
-                    <input id="event-start" type="datetime-local" name="start_time" required
-                        class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900
-                               focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition">
-                </div>
-                <div>
-                    <label for="event-end" class="block text-xs font-medium text-slate-700 mb-1.5">End <span class="text-red-400">*</span></label>
-                    <input id="event-end" type="datetime-local" name="end_time" required
-                        class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900
-                               focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition">
-                </div>
-            </div>
-            <div>
-                <label for="event-category" class="block text-xs font-medium text-slate-700 mb-1.5">Category <span class="text-red-400">*</span></label>
-                <select id="event-category" name="category" required
-                    class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900
-                           focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition">
-                    <option value="">Select a category...</option>
-                    {% for cat in categories %}
-                    <option value="{{ cat.name|escape }}">{{ cat.name|escape }}</option>
-                    {% endfor %}
-                </select>
-                <div class="mt-2">
-                    <button type="button" id="btn-show-new-category" class="text-xs text-teal-600 hover:underline">+ Add new category</button>
-                </div>
-                <div id="new-category-row" class="mt-2 hidden">
-                    <input id="new-category-name" type="text" placeholder="New category name" class="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900" />
-                    <div class="flex items-center gap-2 mt-2">
-                        <label class="text-xs text-slate-500">Color</label>
-                        <input id="new-category-color" type="color" value="#0d9488" />
-                    </div>
-                </div>
-            </div>
-            <div>
-                <label class="inline-flex items-center gap-2 text-xs text-slate-700">
-                    <input id="event-repeat-weekly" type="checkbox" class="form-checkbox" />
-                    <span>Repeat weekly</span>
-                </label>
-                <div id="repeat-options" class="mt-2 hidden">
-                    <label for="event-weekday" class="block text-xs text-slate-500 mb-1">Weekday</label>
-                    <select id="event-weekday" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900">
-                        <option value="MO">Monday</option>
-                        <option value="TU">Tuesday</option>
-                        <option value="WE">Wednesday</option>
-                        <option value="TH">Thursday</option>
-                        <option value="FR">Friday</option>
-                        <option value="SA">Saturday</option>
-                        <option value="SU">Sunday</option>
-                    </select>
-                    <label for="event-recurrence-end" class="block text-xs text-slate-500 mt-3">Until (optional)</label>
-                    <input id="event-recurrence-end" type="date" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900 mt-1" />
-                </div>
-            </div>
-            <div id="form-error" class="hidden bg-red-50 border border-red-100 text-red-600 text-xs rounded-xl px-4 py-2"></div>
-            <div class="flex gap-3 pt-1">
-                <button type="button"
-                    onclick="document.getElementById('event-modal').classList.add('hidden')"
-                    class="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">
-                    Cancel
-                </button>
-                <button id="btn-submit-event" type="button"
-                    class="flex-1 bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold py-2.5 rounded-xl shadow-sm transition-colors">
-                    Create Event
-                </button>
-            </div>
-        </form>
+<!-- ── Quick Add Modal ── -->
+<div id="quick-add-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+  <div id="qa-backdrop" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+  <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-5 space-y-4 z-10 animate-pop">
+    <div class="flex items-center justify-between">
+      <h3 class="text-base font-bold text-slate-900">⚡ Quick Add Event</h3>
+      <button id="qa-cancel" class="text-slate-300 hover:text-slate-600 text-2xl leading-none">&times;</button>
     </div>
+    <div>
+      <input id="qa-title" type="text" placeholder="Event title" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition" />
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="block text-xs font-medium text-slate-500 mb-1">Start</label>
+        <input id="qa-start" type="datetime-local" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 transition" />
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-slate-500 mb-1">End</label>
+        <input id="qa-end" type="datetime-local" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 transition" />
+      </div>
+    </div>
+    <!-- Category with colored dots -->
+    <div>
+      <label class="block text-xs font-medium text-slate-500 mb-1">Category</label>
+      <select id="qa-category" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 transition">
+        <option value="">Select category…</option>
+        {% for cat in categories %}
+        <option value="{{ cat.name|escape }}" data-color="{{ cat.color }}">🔵 {{ cat.name|escape }}</option>
+        {% empty %}
+        <option disabled>No categories found - Please add one</option>
+        {% endfor %}
+      </select>
+      <!-- Live color preview dot -->
+      <div id="qa-cat-preview" class="hidden flex items-center gap-2 mt-1.5 px-1">
+        <span id="qa-cat-dot" class="w-2.5 h-2.5 rounded-full"></span>
+        <span id="qa-cat-label" class="text-xs text-slate-500"></span>
+      </div>
+    </div>
+    <!-- Color Picker: Google Calendar colors -->
+    <div>
+      <label class="block text-xs font-medium text-slate-500 mb-2">Event color</label>
+      <div class="flex items-center gap-2.5" id="qa-color-picker">
+        <button type="button" class="color-circle" data-color="#d50000" style="background:#d50000" title="Tomato"></button>
+        <button type="button" class="color-circle" data-color="#e67c73" style="background:#e67c73" title="Flamingo"></button>
+        <button type="button" class="color-circle" data-color="#f4511e" style="background:#f4511e" title="Tangerine"></button>
+        <button type="button" class="color-circle" data-color="#f6bf26" style="background:#f6bf26" title="Banana"></button>
+        <button type="button" class="color-circle" data-color="#33b679" style="background:#33b679" title="Sage"></button>
+        <button type="button" class="color-circle" data-color="#0b8043" style="background:#0b8043" title="Basil"></button>
+        <button type="button" class="color-circle" data-color="#7986cb" style="background:#7986cb" title="Lavender"></button>
+        <button type="button" class="color-circle" data-color="#8e24aa" style="background:#8e24aa" title="Grape"></button>
+      </div>
+      <input type="hidden" id="qa-color" name="color" value="" />
+    </div>
+    <div id="qa-error" class="hidden bg-red-50 border border-red-100 text-red-600 text-xs rounded-xl px-4 py-2"></div>
+    <div class="flex gap-3">
+      <button id="qa-more-options" type="button" class="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition">More options</button>
+      <button id="qa-submit" type="button" class="flex-1 bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold py-2.5 rounded-xl shadow-sm transition">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Full Event Creation Modal ── -->
+<div id="event-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+  <div id="full-modal-backdrop" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+  <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-5 z-10 animate-pop">
+    <div class="flex items-center justify-between">
+      <div>
+        <h3 class="text-base font-semibold text-slate-900">Create New Event</h3>
+        <p class="text-xs text-slate-400 mt-0.5">Fill in the details below</p>
+      </div>
+      <button id="btn-close-event-modal" class="text-slate-300 hover:text-slate-600 transition-colors text-2xl leading-none">&times;</button>
+    </div>
+    <form id="create-event-form" class="space-y-4" novalidate>
+      {% csrf_token %}
+      <div>
+        <label for="event-title" class="block text-xs font-medium text-slate-700 mb-1.5">Title <span class="text-red-400">*</span></label>
+        <input id="event-title" type="text" name="title" required placeholder="e.g. Team standup"
+          class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition">
+      </div>
+      <div>
+        <label for="event-description" class="block text-xs font-medium text-slate-700 mb-1.5">Description</label>
+        <textarea id="event-description" name="description" rows="2" placeholder="Optional notes…"
+          class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition resize-none"></textarea>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label for="event-start" class="block text-xs font-medium text-slate-700 mb-1.5">Start <span class="text-red-400">*</span></label>
+          <input id="event-start" type="datetime-local" name="start_time" required
+            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition">
+        </div>
+        <div>
+          <label for="event-end" class="block text-xs font-medium text-slate-700 mb-1.5">End <span class="text-red-400">*</span></label>
+          <input id="event-end" type="datetime-local" name="end_time" required
+            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition">
+        </div>
+      </div>
+      <div>
+        <label for="event-category" class="block text-xs font-medium text-slate-700 mb-1.5">Category <span class="text-red-400">*</span></label>
+        <select id="event-category" name="category" required
+          class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition">
+          <option value="">Select a category…</option>
+          {% for cat in categories %}
+          <option value="{{ cat.name|escape }}">{{ cat.name|escape }}</option>
+          {% empty %}
+          <option disabled>No categories found - Please add one</option>
+          {% endfor %}
+        </select>
+        <div class="mt-2">
+          <button type="button" id="btn-show-new-category" class="text-xs text-teal-600 hover:underline">+ Add new category</button>
+        </div>
+        <div id="new-category-row" class="mt-3 p-4 bg-slate-50 rounded-xl border border-slate-100 hidden space-y-3">
+          <div>
+            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Category Name</label>
+            <input id="new-category-name" type="text" placeholder="e.g. Work, Study..." class="w-full px-3.5 py-2 rounded-lg border border-slate-200 bg-white text-sm text-slate-900 focus:ring-2 focus:ring-teal-500 outline-none" />
+          </div>
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-medium text-slate-500">Theme Color</label>
+            <input id="new-category-color" type="color" value="#0d9488" class="w-10 h-10 p-0 border-none bg-transparent cursor-pointer" />
+          </div>
+        </div>
+      </div>
+      <div>
+        <label class="inline-flex items-center gap-2 text-xs text-slate-700">
+          <input id="event-repeat-weekly" type="checkbox" class="form-checkbox" />
+          <span>Repeat weekly</span>
+        </label>
+        <div id="repeat-options" class="mt-2 hidden">
+          <label for="event-weekday" class="block text-xs text-slate-500 mb-1">Weekday</label>
+          <select id="event-weekday" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900">
+            <option value="MO">Monday</option><option value="TU">Tuesday</option><option value="WE">Wednesday</option>
+            <option value="TH">Thursday</option><option value="FR">Friday</option><option value="SA">Saturday</option><option value="SU">Sunday</option>
+          </select>
+          <label for="event-recurrence-end" class="block text-xs text-slate-500 mt-3">Until (optional)</label>
+          <input id="event-recurrence-end" type="date" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900 mt-1" />
+        </div>
+      </div>
+      <div id="form-error" class="hidden bg-red-50 border border-red-100 text-red-600 text-xs rounded-xl px-4 py-2"></div>
+      <div class="flex gap-3 pt-1">
+        <button type="button" id="full-modal-cancel"
+          class="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">Cancel</button>
+        <button id="btn-submit-event" type="button"
+          class="flex-1 bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold py-2.5 rounded-xl shadow-sm transition-colors">Create Event</button>
+      </div>
+    </form>
+  </div>
 </div>
 
 <!-- ── AI Tip Modal ── -->
 <div id="aitip-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4">
-    <!-- Backdrop -->
-    <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onclick="closeTip()"></div>
-
-    <!-- Dialog -->
-    <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden z-10 animate-in fade-in zoom-in duration-200">
-        <div class="bg-teal-600 px-6 py-4 flex items-center justify-between">
-            <div class="flex items-center gap-2 text-white">
-                <span class="text-xl">💡</span>
-                <h3 class="font-bold tracking-wide text-sm uppercase">Gemini AI Tip</h3>
-            </div>
-            <button onclick="closeTip()" class="text-teal-100 hover:text-white transition-colors text-2xl leading-none">&times;</button>
-        </div>
-        <div class="p-6 space-y-4">
-            <p id="aitip-text" class="text-slate-700 text-lg leading-relaxed font-medium italic text-center"></p>
-            <div class="pt-4 border-t border-slate-100">
-                <p class="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-1">For Event</p>
-                <p id="aitip-event-title" class="text-sm font-semibold text-slate-800"></p>
-            </div>
-            <button onclick="closeTip()" 
-                class="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-bold py-3 rounded-xl transition-colors mt-2">
-                Got it
-            </button>
-        </div>
+  <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onclick="closeTip()"></div>
+  <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden z-10 animate-pop">
+    <div class="bg-teal-600 px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-2 text-white">
+        <span class="text-xl">💡</span>
+        <h3 class="font-bold tracking-wide text-sm uppercase">Gemini AI Tip</h3>
+      </div>
+      <button onclick="closeTip()" class="text-teal-100 hover:text-white transition-colors text-2xl leading-none">&times;</button>
     </div>
+    <div class="p-6 space-y-4">
+      <p id="aitip-text" class="text-slate-700 text-lg leading-relaxed font-medium italic text-center"></p>
+      <div class="pt-4 border-t border-slate-100">
+        <p class="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-1">For Event</p>
+        <p id="aitip-event-title" class="text-sm font-semibold text-slate-800"></p>
+      </div>
+      <button onclick="closeTip()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-bold py-3 rounded-xl transition-colors mt-2">Got it</button>
+    </div>
+  </div>
 </div>
+
+<!-- Categories JSON for JS -->
+<script id="categories-json" type="application/json">{{ categories_json|safe }}</script>
 {% endblock %}
 
 {% block extra_scripts %}
-<script>
-function handleDeleteClick(btn){
-    const eventId = btn.getAttribute('data-event-id');
-    const isRecurring = btn.getAttribute('data-recurring') === 'true';
-    const original = btn.getAttribute('data-original-start');
-    if (isRecurring){
-        const single = confirm('Delete only this occurrence? Click OK to delete occurrence, Cancel to delete entire series.');
-        if (single){
-            doDelete(eventId, 'single', original);
-            return;
-        }
-        if (!confirm('Delete entire series? This will remove all occurrences.')) return;
-        doDelete(eventId, 'series', null);
-    } else {
-        if (!confirm('Delete this event?')) return;
-        doDelete(eventId, 'series', null);
-    }
-}
-
-function doDelete(eventId, scope, originalStart){
-    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-    fetch(`/api/events/${eventId}/delete/`, {
-        method: 'POST',
-        headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scope: scope, original_start: originalStart })
-    }).then(r=>r.json()).then(data=>{
-        if (data.success) location.reload();
-        else alert(data.error || 'Failed to delete.');
-    }).catch(()=>alert('Network error'));
-}
-
-// Initialize modal controls
-const repeatCheckboxInit = document.getElementById('event-repeat-weekly');
-if (repeatCheckboxInit){
-    repeatCheckboxInit.addEventListener('change', function(){
-        const opts = document.getElementById('repeat-options');
-        if (this.checked) opts.classList.remove('hidden'); else opts.classList.add('hidden');
-    });
-}
-
-const categorySelectInit = document.getElementById('event-category');
-if (categorySelectInit){
-    categorySelectInit.addEventListener('change', function(){
-        const newRow = document.getElementById('new-category-row');
-        const newName = document.getElementById('new-category-name');
-        if (this.value === '__new__'){
-            newRow.classList.remove('hidden');
-            if (newName){ setTimeout(()=> newName.focus(), 50); }
-        } else {
-            newRow.classList.add('hidden');
-        }
-    });
-}
-
-const openBtnInit = document.getElementById('btn-open-event-modal');
-if (openBtnInit){
-    openBtnInit.addEventListener('click', function(){
-        const newRow = document.getElementById('new-category-row');
-        const newName = document.getElementById('new-category-name');
-        const newColor = document.getElementById('new-category-color');
-        if (newRow) newRow.classList.add('hidden');
-        if (newName) newName.value = '';
-        if (newColor) newColor.value = '#0d9488';
-        const sel = document.getElementById('event-category');
-        if (sel) sel.value = '';
-        const repeat = document.getElementById('event-repeat-weekly');
-        if (repeat) { repeat.checked = false; const opts = document.getElementById('repeat-options'); if (opts) opts.classList.add('hidden'); }
-    });
-}
-
-const showNewCatBtnInit = document.getElementById('btn-show-new-category');
-if (showNewCatBtnInit){
-    showNewCatBtnInit.addEventListener('click', function(){
-        const sel = document.getElementById('event-category');
-        const newRow = document.getElementById('new-category-row');
-        const newName = document.getElementById('new-category-name');
-        if (sel) sel.value = '__new__';
-        if (newRow) newRow.classList.remove('hidden');
-        if (newName) setTimeout(()=> newName.focus(), 50);
-    });
-}
-
-// Submit handler
-const createForm = document.getElementById('create-event-form');
-if (createForm){
-    createForm.addEventListener('submit', submitEventHandler);
-}
-
-function submitEventHandler(e){
-    if (e && e.preventDefault) e.preventDefault();
-
-    const title    = document.getElementById('event-title').value.trim();
-    const start    = document.getElementById('event-start').value;
-    const end      = document.getElementById('event-end').value;
-    let category = document.getElementById('event-category').value;
-    const desc     = document.getElementById('event-description').value;
-    const errBox   = document.getElementById('form-error');
-    const submitBtn = document.getElementById('btn-submit-event');
-
-    errBox.classList.add('hidden');
-
-    let category_color = null;
-    const newNameField = document.getElementById('new-category-name');
-    const newColorField = document.getElementById('new-category-color');
-    const newNameVal = newNameField ? newNameField.value.trim() : '';
-    const newColorVal = newColorField ? newColorField.value || '#0d9488' : '#0d9488';
-    if (category === '__new__' || (!category && newNameVal)){
-        if (!newNameVal){
-            errBox.textContent = 'Please provide a category name.';
-            errBox.classList.remove('hidden');
-            return;
-        }
-        category = newNameVal;
-        category_color = newColorVal;
-    }
-
-    if (!title || !start || !end || !category) {
-        errBox.textContent = 'Please fill in all required fields.';
-        errBox.classList.remove('hidden');
-        return;
-    }
-    if (new Date(end) <= new Date(start)) {
-        errBox.textContent = 'End time must be after start time.';
-        errBox.classList.remove('hidden');
-        return;
-    }
-
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Creating…';
-
-    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-    let rrule = null;
-    let recurrence_end = null;
-    if (document.getElementById('event-repeat-weekly').checked){
-        const dow = document.getElementById('event-weekday').value;
-        rrule = `FREQ=WEEKLY;BYDAY=${dow}`;
-        const untilDate = document.getElementById('event-recurrence-end').value;
-        if (untilDate){
-            recurrence_end = `${untilDate}T23:59:59`;
-        }
-    }
-
-    fetch('/api/events/create/', {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': csrfToken,
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ title, description: desc, start_time: start, end_time: end, category, category_color: category_color, rrule: rrule, recurrence_end: recurrence_end }),
-    })
-    .then(res => res.json().then(data => ({ status: res.status, body: data })))
-    .then(({status, body}) => {
-        if (body.success) {
-            document.getElementById('event-modal').classList.add('hidden');
-            // Reload to show event in correct day group
-            location.reload();
-        } else {
-            errBox.textContent = body.error || 'Something went wrong.';
-            errBox.classList.remove('hidden');
-        }
-    })
-    .catch((err) => {
-        errBox.textContent = 'Network error — please try again.';
-        errBox.classList.remove('hidden');
-    })
-    .finally(() => {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Create Event';
-    });
-}
-
-// Bind click handler to Create button
-const submitBtnEl = document.getElementById('btn-submit-event');
-if (submitBtnEl){
-    submitBtnEl.addEventListener('click', submitEventHandler);
-}
-
-// Also keep form submit as a fallback
-const formEl = document.getElementById('create-event-form');
-if (formEl){
-    formEl.addEventListener('submit', submitEventHandler);
-}
-
-function showTip(text, title) {
-    document.getElementById('aitip-text').textContent = text;
-    document.getElementById('aitip-event-title').textContent = title;
-    document.getElementById('aitip-modal').classList.remove('hidden');
-    document.body.style.overflow = 'hidden'; // Prevent scroll
-}
-
-function closeTip() {
-    document.getElementById('aitip-modal').classList.add('hidden');
-    document.body.style.overflow = '';
-}
-</script>
+<script src="{% static 'js/calendar_app.js' %}"></script>
 {% endblock %}

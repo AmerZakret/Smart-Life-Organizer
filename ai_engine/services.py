@@ -120,3 +120,54 @@ def generate_event_tip(event_title: str, start_time) -> str | None:
             exc,
         )
         return None
+
+def generate_dashboard_insight(username: str, events: list, habits: list, tone: str) -> str | None:
+    """
+    Call Gemini 1.5 Flash to produce a personalized, contextual dashboard tip.
+    """
+    if not _CLIENT_READY or _client is None:
+        logger.debug("Skipping AI tip generation: client not ready.")
+        return None
+
+    events_context = []
+    for e in events:
+        try:
+            time_str = e.start_time.strftime('%a %I:%M %p')
+        except AttributeError:
+            time_str = str(e.start_time)
+        events_context.append(f"'{e.title}' at {time_str}")
+    
+    habits_context = []
+    for h in habits:
+        if h.current_streak > 0:
+            habits_context.append(f"'{h.name}' ({h.current_streak} day streak)")
+
+    prompt_content = f"User: {username}\nUpcoming Events (next 48h): {', '.join(events_context) if events_context else 'None'}\nActive Habit Streaks: {', '.join(habits_context) if habits_context else 'None'}"
+    
+    tone_instruction = "Be highly motivational and enthusiastic."
+    if tone == "direct":
+        tone_instruction = "Be direct, concise, and professional."
+    elif tone == "funny":
+        tone_instruction = "Be humorous and witty."
+
+    system_instruction = (
+        f"You are a sophisticated productivity assistant for {username}. "
+        "Review their upcoming events and habit streaks, and provide ONE short, highly personalized sentence of advice or encouragement. "
+        f"{tone_instruction} "
+        "Do not use filler, markdown, or greetings. Keep it under 25 words."
+    )
+
+    try:
+        response = _client.models.generate_content(
+            model=_MODEL_NAME,
+            contents=prompt_content,
+            config=genai_types.GenerateContentConfig(
+                system_instruction=system_instruction,
+                max_output_tokens=60,
+                temperature=0.7,
+            ),
+        )
+        return response.text.strip() if response.text else None
+    except Exception as exc:
+        logger.error("Gemini API call failed for dashboard insight: %s", exc)
+        return None
