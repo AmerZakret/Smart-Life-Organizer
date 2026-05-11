@@ -22,8 +22,18 @@ logger = logging.getLogger(__name__)
 # ── Page views ────────────────────────────────────────────────────────────────
 
 
+_FALLBACK_QUOTES = [
+    "Consistency is the key to success. Start by completing your first task today!",
+    "Small daily improvements lead to staggering long-term results. Keep going!",
+    "The secret of getting ahead is getting started. You've got this!",
+    "Focus on progress, not perfection. Every step counts.",
+    "Your future self will thank you for the effort you put in today.",
+]
+
+
 @login_required
 def dashboard(request):
+    import random
     user_profile = request.user.userprofile
     today = timezone.now().date()
     now = timezone.now()
@@ -34,7 +44,13 @@ def dashboard(request):
     ).order_by("start_time")
 
     habits = Habit.objects.filter(user=user_profile).order_by("-id")
-    tasks = Task.objects.filter(user=user_profile, is_completed=False).order_by("-id")[:5]
+    all_tasks = Task.objects.filter(user=user_profile)
+    pending_tasks = all_tasks.filter(is_completed=False)
+    tasks = pending_tasks.order_by("-id")[:5]
+    pending_tasks_count = pending_tasks.count()
+
+    # Best habit streak for context
+    best_streak_habit = habits.order_by("-current_streak").first()
 
     # Fetch next 48h events for the personalized tip
     next_48h = now + timedelta(hours=48)
@@ -42,21 +58,28 @@ def dashboard(request):
         user=user_profile,
         start_time__gte=now,
         start_time__lte=next_48h
-    ).order_by("start_time")[:5]  # Limit to 5 for context size
+    ).order_by("start_time")[:5]
 
-    # Generate personalized dashboard insight
+    # Generate personalized dashboard insight via Gemini
     dashboard_tip = generate_dashboard_insight(
         username=request.user.first_name or request.user.username,
         events=list(upcoming_events),
         habits=list(habits),
-        tone=user_profile.ai_tone
+        tone=user_profile.ai_tone,
+        pending_tasks_count=pending_tasks_count,
     )
+
+    # Fallback: if Gemini is unavailable, provide a motivational quote
+    if not dashboard_tip:
+        dashboard_tip = random.choice(_FALLBACK_QUOTES)
 
     context = {
         "events_today": events_today,
         "habits": habits,
         "tasks": tasks,
         "dashboard_tip": dashboard_tip,
+        "pending_tasks_count": pending_tasks_count,
+        "best_streak_habit": best_streak_habit,
         "categories": Category.objects.filter(user=user_profile).order_by("name"),
     }
     return render(request, "planner/dashboard.html", context)

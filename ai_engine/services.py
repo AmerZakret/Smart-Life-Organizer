@@ -121,7 +121,7 @@ def generate_event_tip(event_title: str, start_time) -> str | None:
         )
         return None
 
-def generate_dashboard_insight(username: str, events: list, habits: list, tone: str) -> str | None:
+def generate_dashboard_insight(username: str, events: list, habits: list, tone: str, pending_tasks_count: int = 0) -> str | None:
     """
     Call Gemini 1.5 Flash to produce a personalized, contextual dashboard tip.
     """
@@ -142,7 +142,12 @@ def generate_dashboard_insight(username: str, events: list, habits: list, tone: 
         if h.current_streak > 0:
             habits_context.append(f"'{h.name}' ({h.current_streak} day streak)")
 
-    prompt_content = f"User: {username}\nUpcoming Events (next 48h): {', '.join(events_context) if events_context else 'None'}\nActive Habit Streaks: {', '.join(habits_context) if habits_context else 'None'}"
+    prompt_content = (
+        f"User: {username}\n"
+        f"Pending Tasks: {pending_tasks_count}\n"
+        f"Upcoming Events (next 48h): {', '.join(events_context) if events_context else 'None'}\n"
+        f"Active Habit Streaks: {', '.join(habits_context) if habits_context else 'None'}"
+    )
     
     tone_instruction = "Be highly motivational and enthusiastic."
     if tone == "direct":
@@ -151,10 +156,11 @@ def generate_dashboard_insight(username: str, events: list, habits: list, tone: 
         tone_instruction = "Be humorous and witty."
 
     system_instruction = (
-        f"You are a sophisticated productivity assistant for {username}. "
-        "Review their upcoming events and habit streaks, and provide ONE short, highly personalized sentence of advice or encouragement. "
+        f"You are a sophisticated productivity assistant for {username}, a software engineering student. "
+        "Review their pending tasks, upcoming events, and habit streaks, then provide ONE short, highly personalized sentence of advice or encouragement. "
+        "Reference specific data when possible (e.g. mention an event title or a streak count). "
         f"{tone_instruction} "
-        "Do not use filler, markdown, or greetings. Keep it under 25 words."
+        "Do not use filler, markdown, or greetings. Keep it under 30 words."
     )
 
     try:
@@ -163,7 +169,7 @@ def generate_dashboard_insight(username: str, events: list, habits: list, tone: 
             contents=prompt_content,
             config=genai_types.GenerateContentConfig(
                 system_instruction=system_instruction,
-                max_output_tokens=60,
+                max_output_tokens=80,
                 temperature=0.7,
             ),
         )
