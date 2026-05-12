@@ -1,0 +1,9 @@
+Hi {{ user.username }},
+
+Thanks for registering for Smart Life Organizer.
+
+Activate your account by clicking the link below:
+
+{{ activation_link }}
+
+If you didn't register, ignore this email.

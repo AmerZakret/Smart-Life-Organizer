@@ -1,0 +1,358 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard – Smart Life Organizer{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block page_subtitle %}Here's your overview for today{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Top row: Stats -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <!-- Events today -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-4">
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Events Today</p>
+                <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                    <svg class="w-4 h-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                </div>
+            </div>
+            <p class="text-3xl font-bold text-slate-900">{{ events_today.count }}</p>
+            <p class="text-xs text-slate-400 mt-1">scheduled for today</p>
+        </div>
+        <!-- Habits -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-4">
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Active Habits</p>
+                <div class="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
+                    <svg class="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                </div>
+            </div>
+            <p class="text-3xl font-bold text-slate-900">{{ habits.count }}</p>
+            <p class="text-xs text-slate-400 mt-1">habits being tracked</p>
+        </div>
+        <!-- Completed -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-4">
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Completed</p>
+                <div class="w-8 h-8 rounded-lg bg-teal-50 flex items-center justify-center">
+                    <svg class="w-4 h-4 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+            </div>
+            <p class="text-3xl font-bold text-slate-900">{{ events_today|length|default:0 }}</p>
+            <p class="text-xs text-slate-400 mt-1">events done today</p>
+        </div>
+    </div>
+
+    <!-- Full-width: Daily Growth -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+        <div class="mb-6 pb-3 border-b border-slate-100 flex items-center justify-between">
+            <div>
+                <h2 class="text-base font-bold text-slate-800">Daily Growth (Quick View)</h2>
+                <p class="text-xs text-slate-400 mt-0.5">Rapidly track your tasks and habits.</p>
+            </div>
+            <a href="{% url 'growth' %}" class="text-xs text-teal-600 hover:underline font-bold uppercase tracking-widest">Full Management →</a>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Left: Mini Tasks -->
+            <div class="flex flex-col">
+                <div class="mb-4">
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Mini Tasks</h3>
+                </div>
+                <div class="mb-4">
+                    <form id="create-mini-task-form" class="flex gap-2">
+                        <input id="mini-task-input" type="text" placeholder="Quick add task..."
+                            class="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                        <button id="btn-create-mini-task" type="button" class="px-5 py-2.5 rounded-xl bg-amber-500 text-white text-sm font-bold hover:bg-amber-600 transition-colors shadow-sm">Add</button>
+                    </form>
+                </div>
+
+                <div class="space-y-2.5 overflow-y-auto max-h-[300px] pr-2" id="mini-tasks-list">
+                    {% for task in tasks %}
+                    <div class="flex items-center justify-between p-3.5 rounded-xl border border-slate-100 hover:border-amber-100 hover:bg-amber-50/30 transition-colors"
+                         id="mini-task-row-{{ task.id }}">
+                        <div class="flex items-center gap-3 min-w-0 flex-1">
+                            <button id="mini-task-toggle-{{ task.id }}"
+                                onclick="toggleTask({{ task.id }})"
+                                class="w-6 h-6 rounded-md border-2 border-slate-300 flex items-center justify-center text-white shrink-0 transition-all hover:border-amber-500 hover:bg-amber-50 {% if task.is_completed %}bg-amber-500 border-amber-500{% endif %}"
+                                aria-label="Toggle task {{ task.title }}">
+                                {% if task.is_completed %}
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                {% endif %}
+                            </button>
+                            <div class="min-w-0 flex-1">
+                                <p id="mini-task-title-{{ task.id }}" class="text-sm font-medium text-slate-700 truncate transition-all {% if task.is_completed %}line-through text-slate-400{% endif %}">{{ task.title }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-10" id="mini-tasks-empty-state">
+                        <p class="text-sm text-slate-400">No pending tasks.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Right: Quick Habits -->
+            <div class="border-t md:border-t-0 md:border-l border-slate-100 pt-6 md:pt-0 md:pl-8 flex flex-col">
+                <div class="mb-4">
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Quick Habits</h3>
+                </div>
+                <div class="mb-4">
+                    <form id="create-habit-form" class="flex gap-2">
+                        <input id="habit-name-input" type="text" placeholder="Add new habit..."
+                            class="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                        <button id="btn-create-habit" type="button" class="px-5 py-2.5 rounded-xl bg-teal-600 text-white text-sm font-bold hover:bg-teal-700 transition-colors shadow-sm">Add</button>
+                    </form>
+                </div>
+
+                <div class="space-y-2.5 overflow-y-auto max-h-[300px] pr-2" id="habits-list">
+                    {% for habit in habits %}
+                    <div class="flex items-center justify-between p-3.5 rounded-xl border border-slate-100 hover:border-teal-100 hover:bg-teal-50/30 transition-colors"
+                         id="habit-row-{{ habit.id }}">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <button id="habit-toggle-{{ habit.id }}"
+                                onclick="toggleHabit({{ habit.id }})"
+                                class="w-8 h-8 rounded-lg border-2 border-slate-200 flex items-center justify-center text-white shrink-0 transition-all hover:border-teal-500 hover:bg-teal-50"
+                                aria-label="Toggle habit {{ habit.name }}">
+                            </button>
+                            <div class="min-w-0">
+                                <p class="text-sm font-medium text-slate-700 truncate">{{ habit.name }}</p>
+                            </div>
+                        </div>
+                        <div class="text-right shrink-0 ml-2">
+                            <p class="text-base font-bold text-slate-900" id="streak-{{ habit.id }}">{{ habit.current_streak }} 🔥</p>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-10" id="habits-empty-state">
+                        <p class="text-sm text-slate-400">No habits tracked yet.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Row: Timeline (Left) + AI Insights (Right) -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Today's Timeline -->
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h2 class="text-base font-bold text-slate-800">Today's Timeline</h2>
+                    <p class="text-xs text-slate-400 mt-0.5">Your schedule for the day.</p>
+                </div>
+                <a href="{% url 'calendar' %}" class="text-xs text-teal-600 hover:underline font-medium">Full Calendar →</a>
+            </div>
+            <div class="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                {% for event in events_today %}
+                <div class="flex items-start gap-4 p-3 rounded-xl border border-slate-50 bg-slate-50/50 hover:bg-white hover:shadow-sm transition-all group">
+                    <div class="shrink-0 text-center w-12 py-1 bg-white border border-slate-100 rounded-lg">
+                        <p class="text-[10px] font-bold text-slate-700">{{ event.start_time|time:"H:i" }}</p>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-bold text-slate-800 truncate {{ event.is_completed|yesno:'line-through text-slate-300,' }}">
+                            {{ event.title }}
+                        </p>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-10 bg-slate-50/30 rounded-2xl border border-dashed border-slate-200">
+                    <p class="text-sm font-medium text-slate-500">Nothing on the schedule today.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Gemini AI Insights -->
+        <div class="bg-gradient-to-br from-teal-600 to-teal-700 rounded-xl shadow-lg p-6 text-white flex flex-col">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                </div>
+                <h2 class="text-base font-bold uppercase tracking-wider">Gemini AI Insights</h2>
+            </div>
+            
+            <div class="flex-1 flex flex-col justify-center">
+                {% if dashboard_tip %}
+                <div class="bg-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/10 relative overflow-hidden group">
+                    <div class="absolute -right-4 -top-4 w-24 h-24 bg-white/5 rounded-full blur-2xl group-hover:bg-white/10 transition-colors"></div>
+                    <p class="text-lg font-medium leading-relaxed italic relative z-10">
+                        "{{ dashboard_tip }}"
+                    </p>
+                </div>
+                {% else %}
+                <div class="text-center py-8">
+                    <p class="text-teal-100 text-sm italic">Syncing with your goals...</p>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="mt-8 pt-4 border-t border-white/10">
+                <p class="text-[10px] text-teal-100 uppercase tracking-widest font-bold">Personalized for {{ user.username }}</p>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function toggleTask(taskId) {
+    const csrfToken = '{{ csrf_token }}';
+    fetch(`/api/tasks/${taskId}/toggle/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            const btn = document.getElementById(`mini-task-toggle-${taskId}`);
+            const title = document.getElementById(`mini-task-title-${taskId}`);
+            if (data.is_completed) {
+                btn.innerHTML = '<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>';
+                btn.classList.add('bg-amber-500', 'border-amber-500');
+                title.classList.add('line-through', 'text-slate-400');
+            } else {
+                btn.innerHTML = '';
+                btn.classList.remove('bg-amber-500', 'border-amber-500');
+                title.classList.remove('line-through', 'text-slate-400');
+            }
+        }
+    })
+    .catch(() => {});
+}
+
+document.getElementById('btn-create-mini-task').addEventListener('click', function() {
+    const title = document.getElementById('mini-task-input').value.trim();
+    if (!title) return;
+
+    // Set due_date to today (local time) to sync to calendar
+    const tzoffset = (new Date()).getTimezoneOffset() * 60000;
+    const todayStr = (new Date(Date.now() - tzoffset)).toISOString().slice(0, 10);
+
+    const csrfToken = '{{ csrf_token }}';
+    fetch('/api/tasks/create/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ title: title, due_date: todayStr })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            const container = document.getElementById('mini-tasks-list');
+            if (container) {
+                const el = document.createElement('div');
+                el.id = `mini-task-row-${data.id}`;
+                el.className = 'flex items-center justify-between p-3 rounded-xl border border-slate-100 hover:border-amber-100 hover:bg-amber-50/30 transition-colors';
+                el.innerHTML = `
+                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                        <button id="mini-task-toggle-${data.id}" onclick="toggleTask(${data.id})" class="w-6 h-6 rounded-md border-2 border-slate-300 flex items-center justify-center text-white shrink-0 transition-all hover:border-amber-500 hover:bg-amber-50" aria-label="Toggle task ${data.title}"></button>
+                        <div class="min-w-0 flex-1">
+                            <p id="mini-task-title-${data.id}" class="text-sm font-medium text-slate-700 truncate transition-all">${data.title}</p>
+                        </div>
+                    </div>`;
+                container.prepend(el);
+                const emptyState = document.getElementById('mini-tasks-empty-state');
+                if (emptyState) emptyState.remove();
+                document.getElementById('mini-task-input').value = '';
+            }
+        } else {
+            alert(data.error || 'Could not create task.');
+        }
+    })
+    .catch(() => alert('Network error — task not created.'));
+});
+
+// Habits Handlers
+function toggleHabit(habitId) {
+    const csrfToken = '{{ csrf_token }}';
+    fetch(`/api/habits/${habitId}/toggle/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            const streakEl = document.getElementById(`streak-${habitId}`);
+            if (streakEl) streakEl.textContent = data.new_streak + ' 🔥';
+
+            const btn = document.getElementById(`habit-toggle-${habitId}`);
+            if (btn) {
+                btn.innerHTML = '<svg class="w-4 h-4 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>';
+                btn.classList.add('bg-teal-50', 'border-teal-500');
+                setTimeout(() => {
+                    btn.innerHTML = '';
+                    btn.classList.remove('bg-teal-50', 'border-teal-500');
+                    btn.classList.add('border-slate-200');
+                }, 1500);
+            }
+        }
+    })
+    .catch(() => {});
+}
+
+document.getElementById('btn-create-habit').addEventListener('click', function() {
+    const name = document.getElementById('habit-name-input').value.trim();
+    if (!name) return;
+
+    const csrfToken = '{{ csrf_token }}';
+    fetch('/api/habits/create/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            const container = document.getElementById('habits-list');
+            if (container) {
+                const el = document.createElement('div');
+                el.id = `habit-row-${data.id}`;
+                el.className = 'flex items-center justify-between p-2.5 rounded-xl border border-slate-100 hover:border-teal-100 hover:bg-teal-50/30 transition-colors';
+                el.innerHTML = `
+                    <div class="flex items-center gap-2 min-w-0">
+                        <button id="habit-toggle-${data.id}" onclick="toggleHabit(${data.id})" class="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-white shrink-0 transition-all hover:border-teal-500 hover:bg-teal-50" aria-label="Toggle habit ${data.name}"></button>
+                        <div class="min-w-0">
+                            <p class="text-xs font-medium text-slate-700 truncate">${data.name}</p>
+                        </div>
+                    </div>
+                    <div class="text-right shrink-0 ml-2">
+                        <p class="text-sm font-bold text-slate-900" id="streak-${data.id}">${data.current_streak} 🔥</p>
+                    </div>`;
+                container.prepend(el);
+                const emptyState = document.getElementById('habits-empty-state');
+                if (emptyState) emptyState.remove();
+                document.getElementById('habit-name-input').value = '';
+            }
+        } else {
+            alert(data.error || 'Could not create habit.');
+        }
+    })
+    .catch(() => alert('Network error — habit not created.'));
+});
+</script>
+{% endblock %}

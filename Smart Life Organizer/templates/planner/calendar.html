@@ -1,0 +1,281 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Calendar – Smart Life Organizer{% endblock %}
+{% block page_title %}Calendar{% endblock %}
+{% block page_subtitle %}Manage and browse all your events{% endblock %}
+
+{% block extra_head %}
+<!-- FullCalendar v6 CDN -->
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+
+<style>
+/* ── FullCalendar Theming ── */
+:root { --fc-border-color: #e2e8f0; --fc-today-bg-color: #f0fdfa; --fc-neutral-bg-color: #f8fafc; }
+.fc { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; font-size: 0.85rem; }
+.fc .fc-toolbar { padding: 0 0 1rem 0; flex-wrap: wrap; gap: 0.5rem; }
+.fc .fc-toolbar-title { font-size: 1.25rem; font-weight: 700; color: #0f172a; }
+.fc .fc-button { background: #f1f5f9; border: 1px solid #e2e8f0; color: #334155; font-weight: 600;
+  border-radius: 0.625rem; padding: 0.4rem 0.9rem; font-size: 0.8rem; text-transform: capitalize;
+  transition: all 0.15s ease; box-shadow: none; }
+.fc .fc-button:hover { background: #e2e8f0; color: #0f172a; }
+.fc .fc-button-active, .fc .fc-button:active { background: #0d9488 !important; border-color: #0d9488 !important;
+  color: #fff !important; box-shadow: 0 2px 8px rgba(13,148,136,0.25); }
+.fc .fc-button-primary:disabled { opacity: 0.4; }
+.fc .fc-button-group { border-radius: 0.625rem; overflow: hidden; }
+.fc .fc-button-group .fc-button { border-radius: 0; }
+.fc .fc-button-group .fc-button:first-child { border-radius: 0.625rem 0 0 0.625rem; }
+.fc .fc-button-group .fc-button:last-child { border-radius: 0 0.625rem 0.625rem 0; }
+.fc .fc-col-header-cell { background: #f8fafc; padding: 0.6rem 0; }
+.fc .fc-col-header-cell-cushion { color: #64748b; font-weight: 600; font-size: 0.75rem; text-transform: uppercase;
+  letter-spacing: 0.05em; text-decoration: none; }
+.fc .fc-daygrid-day-number { color: #475569; font-weight: 500; padding: 0.4rem 0.6rem; font-size: 0.82rem;
+  text-decoration: none; }
+.fc .fc-day-today .fc-daygrid-day-number { background: #0d9488; color: #fff; border-radius: 50%; width: 1.8rem;
+  height: 1.8rem; display: flex; align-items: center; justify-content: center; margin: 0.25rem; padding: 0; font-weight: 700; }
+.fc .fc-daygrid-event { border-radius: 0.375rem; border: none; padding: 1px 4px; font-size: 0.75rem;
+  font-weight: 600; cursor: pointer; transition: transform 0.1s, box-shadow 0.1s; }
+.fc .fc-daygrid-event:hover { transform: translateY(-1px); box-shadow: 0 3px 10px rgba(0,0,0,0.1); }
+.fc .fc-timegrid-event { border-radius: 0.375rem; border: none; border-left: 3px solid rgba(255,255,255,0.5);
+  font-size: 0.75rem; font-weight: 600; cursor: pointer; }
+.fc .fc-timegrid-slot-label-cushion { font-size: 0.7rem; color: #94a3b8; font-weight: 500; }
+.fc .fc-timegrid-now-indicator-line { border-color: #ef4444; border-width: 2px; }
+.fc .fc-timegrid-now-indicator-arrow { border-color: #ef4444; }
+.fc .fc-highlight { background: rgba(13,148,136,0.1); }
+.fc .fc-daygrid-day:hover { background: #f8fafc; }
+.fc td, .fc th { border-color: #e2e8f0; }
+.fc .fc-scrollgrid { border-radius: 0.75rem; overflow: hidden; border: 1px solid #e2e8f0; }
+
+/* Quick Add & popovers */
+.animate-pop { animation: popIn 0.15s ease-out; }
+@keyframes popIn { from { opacity: 0; transform: scale(0.95) translateY(-4px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+
+/* Category legend */
+.cat-legend { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.cat-pill { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.65rem;
+  border-radius: 9999px; font-size: 0.7rem; font-weight: 600; border: 1px solid transparent; }
+
+/* Color picker circles */
+.color-circle { width: 24px; height: 24px; border-radius: 50%; cursor: pointer; border: 2px solid transparent;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  flex-shrink: 0; }
+.color-circle:hover { transform: scale(1.18); box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+.color-circle.selected { border-color: #0f172a; box-shadow: 0 0 0 2px rgba(15,23,42,0.15); transform: scale(1.12); }
+
+/* Category dropdown with dot */
+.cat-option-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 gap-6 items-start">
+  <!-- Main Calendar Content (Full Width) -->
+  <div class="space-y-4">
+    <!-- Action bar -->
+    <div class="flex items-center justify-between flex-wrap gap-3">
+      <div class="cat-legend">
+        {% for cat in categories %}
+        <span class="cat-pill" style="background:{{ cat.color }}18;color:{{ cat.color }};border-color:{{ cat.color }}30;">
+          <span class="w-2 h-2 rounded-full" style="background:{{ cat.color }}"></span>
+          {{ cat.name }}
+        </span>
+        {% empty %}
+        <span class="text-xs text-slate-400">No categories yet</span>
+        {% endfor %}
+      </div>
+      <button id="btn-open-event-modal"
+        class="flex items-center gap-2 bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl shadow-sm transition-colors">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+        </svg>
+        New Event
+      </button>
+    </div>
+
+    <!-- Calendar container -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 md:p-6">
+      <form style="display:none">{% csrf_token %}</form>
+      <div id="fullcalendar"></div>
+    </div>
+  </div>
+
+  </div>
+</div>
+
+<!-- ── Quick Add Modal ── -->
+<div id="quick-add-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+  <div id="qa-backdrop" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+  <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-5 space-y-4 z-10 animate-pop">
+    <div class="flex items-center justify-between">
+      <h3 class="text-base font-bold text-slate-900">⚡ Quick Add Event</h3>
+      <button id="qa-cancel" class="text-slate-300 hover:text-slate-600 text-2xl leading-none">&times;</button>
+    </div>
+    <div>
+      <input id="qa-title" type="text" placeholder="Event title" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition" />
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="block text-xs font-medium text-slate-500 mb-1">Start</label>
+        <input id="qa-start" type="datetime-local" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 transition" />
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-slate-500 mb-1">End</label>
+        <input id="qa-end" type="datetime-local" class="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 transition" />
+      </div>
+    </div>
+    <!-- Category with colored dots -->
+    <div>
+      <label class="block text-xs font-medium text-slate-500 mb-1">Category</label>
+      <select id="qa-category" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 transition">
+        <option value="">Select category…</option>
+        {% for cat in categories %}
+        <option value="{{ cat.name|escape }}" data-color="{{ cat.color }}">🔵 {{ cat.name|escape }}</option>
+        {% empty %}
+        <option disabled>No categories found - Please add one</option>
+        {% endfor %}
+      </select>
+      <!-- Live color preview dot -->
+      <div id="qa-cat-preview" class="hidden flex items-center gap-2 mt-1.5 px-1">
+        <span id="qa-cat-dot" class="w-2.5 h-2.5 rounded-full"></span>
+        <span id="qa-cat-label" class="text-xs text-slate-500"></span>
+      </div>
+    </div>
+    <!-- Color Picker: Google Calendar colors -->
+    <div>
+      <label class="block text-xs font-medium text-slate-500 mb-2">Event color</label>
+      <div class="flex items-center gap-2.5" id="qa-color-picker">
+        <button type="button" class="color-circle" data-color="#d50000" style="background:#d50000" title="Tomato"></button>
+        <button type="button" class="color-circle" data-color="#e67c73" style="background:#e67c73" title="Flamingo"></button>
+        <button type="button" class="color-circle" data-color="#f4511e" style="background:#f4511e" title="Tangerine"></button>
+        <button type="button" class="color-circle" data-color="#f6bf26" style="background:#f6bf26" title="Banana"></button>
+        <button type="button" class="color-circle" data-color="#33b679" style="background:#33b679" title="Sage"></button>
+        <button type="button" class="color-circle" data-color="#0b8043" style="background:#0b8043" title="Basil"></button>
+        <button type="button" class="color-circle" data-color="#7986cb" style="background:#7986cb" title="Lavender"></button>
+        <button type="button" class="color-circle" data-color="#8e24aa" style="background:#8e24aa" title="Grape"></button>
+      </div>
+      <input type="hidden" id="qa-color" name="color" value="" />
+    </div>
+    <div id="qa-error" class="hidden bg-red-50 border border-red-100 text-red-600 text-xs rounded-xl px-4 py-2"></div>
+    <div class="flex gap-3">
+      <button id="qa-more-options" type="button" class="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition">More options</button>
+      <button id="qa-submit" type="button" class="flex-1 bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold py-2.5 rounded-xl shadow-sm transition">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Full Event Creation Modal ── -->
+<div id="event-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+  <div id="full-modal-backdrop" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+  <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-5 z-10 animate-pop">
+    <div class="flex items-center justify-between">
+      <div>
+        <h3 class="text-base font-semibold text-slate-900">Create New Event</h3>
+        <p class="text-xs text-slate-400 mt-0.5">Fill in the details below</p>
+      </div>
+      <button id="btn-close-event-modal" class="text-slate-300 hover:text-slate-600 transition-colors text-2xl leading-none">&times;</button>
+    </div>
+    <form id="create-event-form" class="space-y-4" novalidate>
+      {% csrf_token %}
+      <div>
+        <label for="event-title" class="block text-xs font-medium text-slate-700 mb-1.5">Title <span class="text-red-400">*</span></label>
+        <input id="event-title" type="text" name="title" required placeholder="e.g. Team standup"
+          class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition">
+      </div>
+      <div>
+        <label for="event-description" class="block text-xs font-medium text-slate-700 mb-1.5">Description</label>
+        <textarea id="event-description" name="description" rows="2" placeholder="Optional notes…"
+          class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition resize-none"></textarea>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label for="event-start" class="block text-xs font-medium text-slate-700 mb-1.5">Start <span class="text-red-400">*</span></label>
+          <input id="event-start" type="datetime-local" name="start_time" required
+            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition">
+        </div>
+        <div>
+          <label for="event-end" class="block text-xs font-medium text-slate-700 mb-1.5">End <span class="text-red-400">*</span></label>
+          <input id="event-end" type="datetime-local" name="end_time" required
+            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition">
+        </div>
+      </div>
+      <div>
+        <label for="event-category" class="block text-xs font-medium text-slate-700 mb-1.5">Category <span class="text-red-400">*</span></label>
+        <select id="event-category" name="category" required
+          class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition">
+          <option value="">Select a category…</option>
+          {% for cat in categories %}
+          <option value="{{ cat.name|escape }}">{{ cat.name|escape }}</option>
+          {% empty %}
+          <option disabled>No categories found - Please add one</option>
+          {% endfor %}
+        </select>
+        <div class="mt-2">
+          <button type="button" id="btn-show-new-category" class="text-xs text-teal-600 hover:underline">+ Add new category</button>
+        </div>
+        <div id="new-category-row" class="mt-3 p-4 bg-slate-50 rounded-xl border border-slate-100 hidden space-y-3">
+          <div>
+            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Category Name</label>
+            <input id="new-category-name" type="text" placeholder="e.g. Work, Study..." class="w-full px-3.5 py-2 rounded-lg border border-slate-200 bg-white text-sm text-slate-900 focus:ring-2 focus:ring-teal-500 outline-none" />
+          </div>
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-medium text-slate-500">Theme Color</label>
+            <input id="new-category-color" type="color" value="#0d9488" class="w-10 h-10 p-0 border-none bg-transparent cursor-pointer" />
+          </div>
+        </div>
+      </div>
+      <div>
+        <label class="inline-flex items-center gap-2 text-xs text-slate-700">
+          <input id="event-repeat-weekly" type="checkbox" class="form-checkbox" />
+          <span>Repeat weekly</span>
+        </label>
+        <div id="repeat-options" class="mt-2 hidden">
+          <label for="event-weekday" class="block text-xs text-slate-500 mb-1">Weekday</label>
+          <select id="event-weekday" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900">
+            <option value="MO">Monday</option><option value="TU">Tuesday</option><option value="WE">Wednesday</option>
+            <option value="TH">Thursday</option><option value="FR">Friday</option><option value="SA">Saturday</option><option value="SU">Sunday</option>
+          </select>
+          <label for="event-recurrence-end" class="block text-xs text-slate-500 mt-3">Until (optional)</label>
+          <input id="event-recurrence-end" type="date" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900 mt-1" />
+        </div>
+      </div>
+      <div id="form-error" class="hidden bg-red-50 border border-red-100 text-red-600 text-xs rounded-xl px-4 py-2"></div>
+      <div class="flex gap-3 pt-1">
+        <button type="button" id="full-modal-cancel"
+          class="flex-1 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors">Cancel</button>
+        <button id="btn-submit-event" type="button"
+          class="flex-1 bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold py-2.5 rounded-xl shadow-sm transition-colors">Create Event</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ── AI Tip Modal ── -->
+<div id="aitip-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4">
+  <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onclick="closeTip()"></div>
+  <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden z-10 animate-pop">
+    <div class="bg-teal-600 px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-2 text-white">
+        <span class="text-xl">💡</span>
+        <h3 class="font-bold tracking-wide text-sm uppercase">Gemini AI Tip</h3>
+      </div>
+      <button onclick="closeTip()" class="text-teal-100 hover:text-white transition-colors text-2xl leading-none">&times;</button>
+    </div>
+    <div class="p-6 space-y-4">
+      <p id="aitip-text" class="text-slate-700 text-lg leading-relaxed font-medium italic text-center"></p>
+      <div class="pt-4 border-t border-slate-100">
+        <p class="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-1">For Event</p>
+        <p id="aitip-event-title" class="text-sm font-semibold text-slate-800"></p>
+      </div>
+      <button onclick="closeTip()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-bold py-3 rounded-xl transition-colors mt-2">Got it</button>
+    </div>
+  </div>
+</div>
+
+<!-- Categories JSON for JS -->
+<script id="categories-json" type="application/json">{{ categories_json|safe }}</script>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'js/calendar_app.js' %}"></script>
+{% endblock %}

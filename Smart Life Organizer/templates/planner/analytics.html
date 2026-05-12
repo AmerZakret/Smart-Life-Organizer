@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+
+{% block title %}Analytics – Smart Life Organizer{% endblock %}
+{% block page_title %}Analytics{% endblock %}
+{% block page_subtitle %}Your productivity insights and statistics{% endblock %}
+
+{% block content %}
+<div class="space-y-10 py-6">
+    <!-- Top Row: Today's Distribution & Insights Summary -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Distribution Chart -->
+        <div class="bg-slate-900 rounded-[2.5rem] shadow-2xl border border-teal-500/10 p-8 flex flex-col h-full min-h-[420px] relative overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-br from-teal-500/5 to-transparent pointer-events-none"></div>
+            <div class="mb-8 relative z-10">
+                <h2 class="text-xs font-black text-teal-500 uppercase tracking-[0.3em] mb-2">Today's Distribution</h2>
+                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Time allocation by category</p>
+            </div>
+            <div class="flex-1 flex items-center justify-center relative z-10">
+                {% if chart_html %}
+                    <div class="w-full h-full scale-110">
+                        {{ chart_html|safe }}
+                    </div>
+                {% else %}
+                    <div class="text-center py-20 bg-slate-800/20 rounded-3xl border border-dashed border-slate-800 w-full">
+                        <p class="text-xs text-slate-500 font-black uppercase tracking-widest italic">No data recorded today</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Insights Summary -->
+        <div class="bg-slate-900 rounded-[2.5rem] shadow-2xl border border-teal-500/10 p-8 flex flex-col h-full min-h-[420px] relative overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent pointer-events-none"></div>
+            <div class="mb-8 relative z-10">
+                <h2 class="text-xs font-black text-indigo-400 uppercase tracking-[0.3em] mb-2">Insights Summary</h2>
+                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Top 3 focused areas</p>
+            </div>
+            <div class="space-y-8 flex-1 relative z-10">
+                {% for cat in top_categories|slice:":3" %}
+                <div class="group">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-2.5 h-2.5 rounded-full shadow-[0_0_10px_rgba(255,255,255,0.2)] transition-transform group-hover:scale-125" style="background-color: {{ cat.color }}"></div>
+                            <span class="text-sm font-black text-slate-200 uppercase tracking-widest">{{ cat.name }}</span>
+                        </div>
+                        <span class="text-xs font-black text-slate-500 tracking-tighter">{{ cat.percentage }}%</span>
+                    </div>
+                    <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden border border-slate-700/50">
+                        <div class="h-full rounded-full transition-all duration-1000 shadow-[0_0_15px_rgba(0,0,0,0.5)]" style="background-color: {{ cat.color }}; width: {{ cat.percentage }}%"></div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="h-full flex items-center justify-center text-center py-20 bg-slate-800/20 rounded-3xl border border-dashed border-slate-800">
+                    <p class="text-xs text-slate-500 font-black uppercase tracking-widest italic">Insufficient data for summary</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Weekly Productivity Heatmap -->
+    <div class="bg-slate-900 rounded-[2.5rem] shadow-2xl border border-teal-500/10 p-10 relative overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-t from-teal-500/5 to-transparent pointer-events-none"></div>
+        <div class="flex flex-col md:flex-row md:items-center justify-between mb-10 relative z-10 gap-6">
+            <div>
+                <h2 class="text-xs font-black text-teal-500 uppercase tracking-[0.3em] mb-2">Weekly Productivity</h2>
+                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Heatmap of your daily achievements</p>
+            </div>
+            <div class="flex items-center gap-4 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] bg-slate-800/50 px-5 py-2.5 rounded-2xl border border-slate-800">
+                <span>Less</span>
+                <div class="flex gap-2">
+                    <div class="w-3.5 h-3.5 rounded-md bg-slate-800 border border-slate-700"></div>
+                    <div class="w-3.5 h-3.5 rounded-md bg-teal-900/50 border border-teal-900"></div>
+                    <div class="w-3.5 h-3.5 rounded-md bg-teal-700/50 border border-teal-700"></div>
+                    <div class="w-3.5 h-3.5 rounded-md bg-teal-500 shadow-[0_0_10px_rgba(20,184,166,0.3)]"></div>
+                    <div class="w-3.5 h-3.5 rounded-md bg-teal-400 shadow-[0_0_15px_rgba(45,212,191,0.5)]"></div>
+                </div>
+                <span>More</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-6 relative z-10">
+            {% for day in weekly_activity %}
+            <div class="flex flex-col items-center gap-4 group">
+                <div class="w-full aspect-square rounded-[1.5rem] transition-all duration-500 hover:scale-105 hover:rotate-2 cursor-pointer relative
+                    {% if day.count == 0 %}bg-slate-800/40 border border-slate-800
+                    {% elif day.count < 3 %}bg-teal-900/40 border border-teal-800/50
+                    {% elif day.count < 6 %}bg-teal-700/60 border border-teal-600/50
+                    {% elif day.count < 10 %}bg-teal-500 shadow-[0_0_20px_rgba(20,184,166,0.3)]
+                    {% else %}bg-teal-400 shadow-[0_0_30px_rgba(45,212,191,0.5)] border border-white/20{% endif %}">
+                    
+                    <!-- Tooltip -->
+                    <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 px-3 py-2 bg-slate-950 text-teal-400 text-[10px] font-black uppercase tracking-widest rounded-xl opacity-0 group-hover:opacity-100 transition-all transform group-hover:-translate-y-1 shadow-2xl border border-teal-500/20 z-20 pointer-events-none">
+                        {{ day.count }} Events <span class="text-slate-500 mx-1">•</span> {{ day.date|date:"M d" }}
+                    </div>
+                </div>
+                <div class="text-center">
+                    <p class="text-xs font-black text-slate-300 uppercase tracking-widest">{{ day.day }}</p>
+                    <p class="text-[10px] text-slate-500 font-bold uppercase mt-1 tracking-tighter">{{ day.date|date:"d M" }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+</div>
+{% endblock %}

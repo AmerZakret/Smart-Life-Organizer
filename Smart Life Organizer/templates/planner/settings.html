@@ -1,0 +1,190 @@
+{% extends 'base.html' %}
+
+{% block title %}Settings – Smart Life Organizer{% endblock %}
+{% block page_title %}Settings{% endblock %}
+{% block page_subtitle %}Manage your preferences and AI tone{% endblock %}
+
+{% block content %}
+<div class="w-full mx-auto space-y-6">
+
+    <!-- Profile card -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+        <div class="flex items-center gap-4 mb-6 pb-6 border-b border-slate-100">
+            <div class="w-14 h-14 rounded-2xl bg-teal-600 flex items-center justify-center text-white text-xl font-bold uppercase shadow">
+                {{ user.username|slice:":1" }}
+            </div>
+            <div>
+                <p class="font-semibold text-slate-900 text-base">{{ user.username }}</p>
+                <p class="text-sm text-slate-400">{{ user.email }}</p>
+                <p class="text-xs text-slate-300 mt-0.5">Member since {{ user.date_joined|date:"F Y" }}</p>
+            </div>
+        </div>
+
+        <form id="settings-form" method="POST" action="{% url 'settings' %}" class="space-y-5">
+            {% csrf_token %}
+
+            <!-- Timezone -->
+            <div>
+                <label for="timezone" class="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">
+                    Timezone
+                </label>
+                <input id="timezone" type="text" name="timezone" value="{{ profile.timezone }}"
+                    class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder-slate-400
+                           focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition"
+                    placeholder="e.g. Europe/London, America/New_York">
+                <p class="text-xs text-slate-400 mt-1">Enter a valid IANA timezone name.</p>
+            </div>
+
+            <!-- AI Tone -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide">
+                    AI Tip Tone
+                </label>
+                <p class="text-xs text-slate-400 mb-3">Choose how Gemini delivers your event tips.</p>
+                <div class="grid grid-cols-3 gap-3" role="radiogroup" aria-labelledby="tone-label">
+                    {% for value, label in tones %}
+                    <label for="tone-{{ value }}"
+                        class="flex flex-col items-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all
+                               {% if profile.ai_tone == value %}border-teal-500 bg-teal-50{% else %}border-slate-100 hover:border-slate-300 bg-white{% endif %}">
+                        <input type="radio" id="tone-{{ value }}" name="ai_tone" value="{{ value }}"
+                               {% if profile.ai_tone == value %}checked{% endif %} class="sr-only">
+                        <span class="text-xl">
+                            {% if value == 'motivational' %}🚀
+                            {% elif value == 'direct' %}⚡
+                            {% else %}💼{% endif %}
+                        </span>
+                        <span class="text-xs font-semibold text-slate-700">{{ label }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Save -->
+            <div class="pt-2">
+                <button id="btn-save-settings" type="submit"
+                    class="w-full bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors shadow-sm">
+                    Save Preferences
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Category Management -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h2 class="text-sm font-semibold text-slate-800 mb-1">Categories</h2>
+                <p class="text-xs text-slate-400">Manage your event categories here.</p>
+            </div>
+        </div>
+        <div class="space-y-3">
+            {% for cat in categories %}
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50" id="cat-row-{{ cat.pk }}">
+                <div class="flex items-center gap-3">
+                    <input type="color" id="cat-color-{{ cat.pk }}" value="{{ cat.color|default:'#0d9488' }}" class="w-8 h-8 rounded shrink-0 border border-slate-200 cursor-pointer" />
+                    <input type="text" id="cat-name-{{ cat.pk }}" value="{{ cat.name }}" class="px-3 py-1.5 rounded-lg border border-slate-200 text-sm font-medium focus:ring-1 focus:ring-teal-500 w-full sm:w-auto" />
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                    <button type="button" onclick="saveCategory({{ cat.pk }})" class="text-xs font-semibold text-teal-600 hover:text-teal-700 hover:bg-teal-50 px-3 py-1.5 rounded-lg transition-colors">Save</button>
+                    <button type="button" onclick="deleteCategory({{ cat.pk }}, '{{ cat.name|escapejs }}')" class="text-xs font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors">Delete</button>
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-sm text-slate-400 italic text-center py-4">No custom categories yet. Create some from the calendar!</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Danger zone placeholder -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+        <h2 class="text-sm font-semibold text-slate-800 mb-1">Account</h2>
+        <p class="text-xs text-slate-400 mb-4">Manage your account and session.</p>
+        <form method="post" action="{% url 'logout' %}">
+            {% csrf_token %}
+            <button id="btn-logout-settings" type="submit"
+                class="flex items-center gap-2 px-4 py-2 rounded-xl border border-red-100 text-red-600 text-sm font-medium hover:bg-red-50 transition-colors">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                </svg>
+                Sign out
+            </button>
+        </form>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Radio card visual update on click
+document.querySelectorAll('[name="ai_tone"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+        document.querySelectorAll('[name="ai_tone"]').forEach(r => {
+            const card = r.closest('label');
+            card.classList.remove('border-teal-500', 'bg-teal-50');
+            card.classList.add('border-slate-100', 'bg-white');
+        });
+        const selected = radio.closest('label');
+        selected.classList.add('border-teal-500', 'bg-teal-50');
+        selected.classList.remove('border-slate-100', 'bg-white');
+    });
+});
+
+// Category Management scripts
+const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+function saveCategory(catId) {
+    const nameStr = document.getElementById(`cat-name-${catId}`).value.trim();
+    const colorStr = document.getElementById(`cat-color-${catId}`).value;
+
+    fetch(`/api/categories/${catId}/edit/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({ name: nameStr, color: colorStr })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.success) {
+            alert('Category updated successfully! Changes will naturally reflect across your events.');
+        } else {
+            alert(data.error || 'Could not update category.');
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert('Network error updating category.');
+    });
+}
+
+function deleteCategory(catId, catName) {
+    const confirmation = confirm(`WARNING: Are you sure you want to delete the category "${catName}"?\n\nThis will permanently delete ALL events linked to this category!`);
+    
+    if(!confirmation) return;
+
+    fetch(`/api/categories/${catId}/delete/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.success) {
+            alert('Category and its events have been deleted.');
+            const row = document.getElementById(`cat-row-${catId}`);
+            if(row) row.remove();
+        } else {
+            alert(data.error || 'Could not delete category.');
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert('Network error deleting category.');
+    });
+}
+</script>
+{% endblock %}
