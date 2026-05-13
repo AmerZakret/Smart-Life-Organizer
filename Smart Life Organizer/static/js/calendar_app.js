@@ -238,6 +238,14 @@ document.addEventListener('DOMContentLoaded', function () {
         ${ext.description ? '<p class="text-slate-400 italic">' + ext.description + '</p>' : ''}
         ${ext.isRecurring ? '<p class="text-amber-600">↻ Recurring event</p>' : ''}
       </div>
+      ${ext.aiTip ? `
+      <div class="mt-3 p-3 bg-teal-50 rounded-xl border border-teal-100">
+        <div class="flex items-center gap-1.5 mb-1">
+          <span class="text-[10px]">💡</span>
+          <span class="text-[10px] font-bold text-teal-700 uppercase tracking-wider">AI Insight</span>
+        </div>
+        <p class="text-xs text-teal-900 leading-relaxed italic">"${ext.aiTip}"</p>
+      </div>` : ''}
       <div class="flex gap-2 pt-2 border-t border-slate-100">
         <button onclick="deleteFromPopover(${event.id}, ${ext.isRecurring}, '${ext.originalStart || ''}')" class="flex-1 text-xs font-semibold text-red-500 hover:bg-red-50 py-2 rounded-lg transition">Delete</button>
         <button onclick="closePopover()" class="flex-1 text-xs font-semibold text-slate-500 hover:bg-slate-50 py-2 rounded-lg transition">Close</button>

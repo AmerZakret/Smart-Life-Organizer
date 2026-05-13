@@ -152,9 +152,11 @@ def generate_dashboard_insight(username: str, events: list, habits: list, tone: 
 
     system_instruction = (
         f"You are a sophisticated productivity assistant for {username}. "
-        "Review their upcoming events and habit streaks, and provide ONE short, highly personalized sentence of advice or encouragement. "
+        "Review the provided upcoming events and habit streaks. "
+        "Provide ONE short, highly personalized sentence of advice, preparation, or encouragement. "
+        "IMPORTANT: Try to mention a specific upcoming event by its title if possible. "
         f"{tone_instruction} "
-        "Do not use filler, markdown, or greetings. Keep it under 25 words."
+        "Do not use markdown, greetings, or conversational filler. Keep it under 25 words."
     )
 
     try:

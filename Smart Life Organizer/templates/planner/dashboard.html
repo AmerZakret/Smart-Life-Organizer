@@ -19,7 +19,7 @@
                     </svg>
                 </div>
             </div>
-            <p class="text-3xl font-bold text-slate-900">{{ events_today.count }}</p>
+            <p class="text-3xl font-bold text-slate-900">{{ events_today|length }}</p>
             <p class="text-xs text-slate-400 mt-1">scheduled for today</p>
         </div>
         <!-- Habits -->
@@ -45,7 +45,7 @@
                     </svg>
                 </div>
             </div>
-            <p class="text-3xl font-bold text-slate-900">{{ events_today|length|default:0 }}</p>
+            <p class="text-3xl font-bold text-slate-900">{{ events_today|length }}</p>
             <p class="text-xs text-slate-400 mt-1">events done today</p>
         </div>
     </div>
@@ -153,15 +153,31 @@
                 <a href="{% url 'calendar' %}" class="text-xs text-teal-600 hover:underline font-medium">Full Calendar →</a>
             </div>
             <div class="space-y-3 max-h-[400px] overflow-y-auto pr-2">
-                {% for event in events_today %}
-                <div class="flex items-start gap-4 p-3 rounded-xl border border-slate-50 bg-slate-50/50 hover:bg-white hover:shadow-sm transition-all group">
-                    <div class="shrink-0 text-center w-12 py-1 bg-white border border-slate-100 rounded-lg">
-                        <p class="text-[10px] font-bold text-slate-700">{{ event.start_time|time:"H:i" }}</p>
+                {% for occ in events_today %}
+                <div class="flex items-start gap-4 p-4 rounded-2xl border border-slate-100 bg-white hover:shadow-md hover:border-teal-100 transition-all group relative overflow-hidden">
+                    {% if occ.event.aitip %}
+                    <div class="absolute top-0 right-0 px-2 py-1 bg-teal-50 text-[9px] font-bold text-teal-600 rounded-bl-lg uppercase tracking-widest border-l border-b border-teal-100">AI Tip Available</div>
+                    {% endif %}
+                    
+                    <div class="shrink-0 text-center w-14 py-2 bg-slate-50 border border-slate-100 rounded-xl group-hover:bg-teal-50 group-hover:border-teal-200 transition-colors">
+                        <p class="text-xs font-bold text-slate-700 group-hover:text-teal-700">{{ occ.start_time|time:"H:i" }}</p>
                     </div>
+                    
                     <div class="flex-1 min-w-0">
-                        <p class="text-sm font-bold text-slate-800 truncate {{ event.is_completed|yesno:'line-through text-slate-300,' }}">
-                            {{ event.title }}
+                        <p class="text-sm font-bold text-slate-800 truncate {{ occ.event.is_completed|yesno:'line-through text-slate-300,' }}">
+                            {{ occ.title }}
                         </p>
+                        <p class="text-[10px] text-slate-400 font-medium uppercase tracking-wider mt-0.5">
+                            {{ occ.category.name|default:"General" }}
+                        </p>
+                        
+                        {% if occ.event.aitip %}
+                        <div class="mt-3 p-3 bg-teal-50/50 rounded-xl border border-teal-100/50 group-hover:bg-teal-50 transition-colors">
+                            <p class="text-xs text-teal-800 font-medium leading-relaxed italic">
+                                " {{ occ.event.aitip.tip_text }} "
+                            </p>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
                 {% empty %}

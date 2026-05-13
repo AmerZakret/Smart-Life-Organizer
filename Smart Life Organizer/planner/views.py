@@ -25,35 +25,36 @@ logger = logging.getLogger(__name__)
 @login_required
 def dashboard(request):
     user_profile = request.user.userprofile
-    today = timezone.now().date()
     now = timezone.now()
+    local_now = timezone.localtime(now)
+    today_start = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
+    today_end = today_start + timedelta(days=1)
 
-    events_today = Event.objects.filter(
-        user=user_profile,
-        start_time__date=today,
-    ).order_by("start_time")
+    # Fetch and expand events for today's timeline
+    events_qs = Event.objects.filter(user=user_profile).select_related("category")
+    # Prefetch AITips to avoid N+1
+    events_qs = events_qs.prefetch_related("aitip")
+    
+    events_today_expanded = expand_events_for_range(events_qs, today_start, today_end)
 
     habits = Habit.objects.filter(user=user_profile).order_by("-id")
     tasks = Task.objects.filter(user=user_profile, is_completed=False).order_by("-id")[:5]
 
     # Fetch next 48h events for the personalized tip
     next_48h = now + timedelta(hours=48)
-    upcoming_events = Event.objects.filter(
-        user=user_profile,
-        start_time__gte=now,
-        start_time__lte=next_48h
-    ).order_by("start_time")[:5]  # Limit to 5 for context size
+    upcoming_events_qs = Event.objects.filter(user=user_profile).select_related("category")
+    upcoming_events_expanded = expand_events_for_range(upcoming_events_qs, now, next_48h)[:5]
 
     # Generate personalized dashboard insight
     dashboard_tip = generate_dashboard_insight(
         username=request.user.first_name or request.user.username,
-        events=list(upcoming_events),
+        events=[occ["event"] for occ in upcoming_events_expanded],
         habits=list(habits),
         tone=user_profile.ai_tone
     )
 
     context = {
-        "events_today": events_today,
+        "events_today": events_today_expanded,
         "habits": habits,
         "tasks": tasks,
         "dashboard_tip": dashboard_tip,
@@ -251,7 +252,7 @@ def api_events_feed(request):
     if timezone.is_naive(end_dt):
         end_dt = timezone.make_aware(end_dt)
 
-    events_qs = Event.objects.filter(user=user_profile).select_related("category")
+    events_qs = Event.objects.filter(user=user_profile).select_related("category").prefetch_related("aitip")
     occurrences = expand_events_for_range(events_qs, start_dt, end_dt)
 
     fc_events = []
@@ -277,6 +278,7 @@ def api_events_feed(request):
                         else None
                     ),
                     "isCompleted": occ["event"].is_completed,
+                    "aiTip": occ["event"].aitip.tip_text if hasattr(occ["event"], 'aitip') else None,
                 },
             }
         )
