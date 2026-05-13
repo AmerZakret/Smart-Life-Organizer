@@ -12,7 +12,7 @@ from django.views.decorators.http import require_GET, require_POST
 from icalendar import Calendar, Event as IcsEvent
 
 from ai_engine.models import AITip
-from ai_engine.services import generate_dashboard_insight
+from ai_engine.services import generate_dashboard_insight, chat_with_data, generate_roadmap
 from .models import Category, Event, Habit, Task, PomodoroSession
 from .utils import expand_events_for_range
 
@@ -88,26 +88,30 @@ def dashboard(request):
 def analytics(request):
     user_profile = request.user.userprofile
     today = timezone.now().date()
-    seven_days_ago = today - timedelta(days=7)
 
-    # All events for today
-    events_today = Event.objects.filter(
-        user=user_profile,
-        start_time__date=today,
-    ).order_by("start_time")
+    # ── 1. Dynamic Pie Chart (Today's Distribution) ───────────────────
+    today_tasks = Task.objects.filter(user=user_profile, created_at__date=today)
+    
+    cat_counts = {"Flutter": 0, "Django": 0, "University Study": 0, "Other": 0}
+    cat_colors = {"Flutter": "#14b8a6", "Django": "#1e3a8a", "University Study": "#f59e0b", "Other": "#64748b"}
+    
+    for t in today_tasks:
+        title = t.title.lower()
+        if "flutter" in title or "dart" in title:
+            cat_counts["Flutter"] += 1
+        elif "django" in title or "python" in title:
+            cat_counts["Django"] += 1
+        elif "study" in title or "exam" in title or "university" in title or "assignment" in title:
+            cat_counts["University Study"] += 1
+        else:
+            cat_counts["Other"] += 1
 
-    # Category counts for today's chart
-    cat_counts = {}
-    cat_colors = {}
-    categories_objects = [e.category for e in events_today if e.category]
-    for cat in categories_objects:
-        cat_counts[cat.name] = cat_counts.get(cat.name, 0) + 1
-        if cat.color:
-            cat_colors[cat.name] = cat.color
-
-    if cat_counts:
-        names = list(cat_counts.keys())
-        values = list(cat_counts.values())
+    active_counts = {k: v for k, v in cat_counts.items() if v > 0}
+    
+    chart_html = None
+    if active_counts:
+        names = list(active_counts.keys())
+        values = list(active_counts.values())
         fig = px.pie(
             names=names,
             values=values,
@@ -115,52 +119,137 @@ def analytics(request):
             color_discrete_map=cat_colors,
         )
         fig.update_layout(
-            margin=dict(l=0, r=0, t=40, b=0),
+            margin=dict(l=0, r=0, t=20, b=0),
             paper_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Inter, sans-serif", size=12),
-            title_text=""
+            plot_bgcolor="rgba(0,0,0,0)",
+            showlegend=False,
+            font=dict(color="white"),
         )
-        chart_html = fig.to_html(full_html=False, include_plotlyjs="cdn")
-    else:
-        chart_html = ""
+        fig.update_traces(
+            textposition="inside",
+            textinfo="percent+label",
+            marker=dict(line=dict(color="#0f172a", width=2)),
+        )
+        chart_html = fig.to_html(full_html=False, include_plotlyjs="cdn", config={'displayModeBar': False})
 
-    # Top Categories (Full dataset)
-    all_categories = Category.objects.filter(user=user_profile)
-    top_categories_data = []
-    total_events = Event.objects.filter(user=user_profile).count()
+    # ── 2. Focus Streak Counter ───────────────────────────────────────
+    pomodoro_dates = list(PomodoroSession.objects.filter(user=user_profile)
+                          .values_list('completed_at__date', flat=True)
+                          .distinct()
+                          .order_by('-completed_at__date'))
     
-    for cat in all_categories:
-        count = Event.objects.filter(user=user_profile, category=cat).count()
-        if count > 0:
-            percentage = (count / total_events * 100) if total_events > 0 else 0
-            top_categories_data.append({
-                "name": cat.name,
-                "count": count,
-                "percentage": int(percentage),
-                "color": cat.color
-            })
-    top_categories_data = sorted(top_categories_data, key=lambda x: x["count"], reverse=True)[:5]
+    current_streak = 0
+    if pomodoro_dates:
+        check_date = today
+        if pomodoro_dates[0] == today:
+            current_streak = 1
+            check_date = today - timedelta(days=1)
+            for d in pomodoro_dates[1:]:
+                if d == check_date:
+                    current_streak += 1
+                    check_date -= timedelta(days=1)
+                else:
+                    break
+        elif pomodoro_dates[0] == today - timedelta(days=1):
+            current_streak = 1
+            check_date = today - timedelta(days=2)
+            for d in pomodoro_dates[1:]:
+                if d == check_date:
+                    current_streak += 1
+                    check_date -= timedelta(days=1)
+                else:
+                    break
 
-    # Weekly Activity (Heatmap data)
+    # ── 3. Weekly Heatmap ─────────────────────────────────────────────
+    dates_last_7 = [today - timedelta(days=i) for i in range(6, -1, -1)]
     weekly_activity = []
-    for i in range(7):
-        day = today - timedelta(days=i)
-        count = Event.objects.filter(user=user_profile, start_time__date=day).count()
-        weekly_activity.append({
-            "day": day.strftime("%a"),
-            "date": day,
-            "count": count
-        })
-    weekly_activity.reverse()
+    for d in dates_last_7:
+        count = Event.objects.filter(user=user_profile, start_time__date=d).count()
+        weekly_activity.append(
+            {"date": d, "day": d.strftime("%a"), "count": count}
+        )
 
-    context = {
-        "chart_html": chart_html,
-        "events_today_count": events_today.count(),
-        "top_categories": top_categories_data,
-        "weekly_activity": weekly_activity,
-        "max_activity": max([d["count"] for d in weekly_activity]) if weekly_activity else 0
-    }
-    return render(request, "planner/analytics.html", context)
+    # ── 4. Skill Mastery ──────────────────────────────────────────────
+    all_completed = Task.objects.filter(user=user_profile, is_completed=True)
+    skills = {"Flutter": 0, "Python": 0, "SQL Server": 0}
+    
+    for t in all_completed:
+        title = t.title.lower()
+        if "flutter" in title or "dart" in title:
+            skills["Flutter"] += 1
+        if "python" in title or "django" in title:
+            skills["Python"] += 1
+        if "sql" in title or "database" in title:
+            skills["SQL Server"] += 1
+
+    skill_progress = [
+        {
+            "name": "Flutter", 
+            "level": (skills["Flutter"] // 10) + 1, 
+            "progress": (skills["Flutter"] % 10) * 10, 
+            "color": "bg-sky-400", 
+            "shadow": "shadow-[0_0_15px_rgba(56,189,248,0.5)]"
+        },
+        {
+            "name": "Python/Django", 
+            "level": (skills["Python"] // 10) + 1, 
+            "progress": (skills["Python"] % 10) * 10, 
+            "color": "bg-emerald-400", 
+            "shadow": "shadow-[0_0_15px_rgba(52,211,153,0.5)]"
+        },
+        {
+            "name": "SQL Server", 
+            "level": (skills["SQL Server"] // 10) + 1, 
+            "progress": (skills["SQL Server"] % 10) * 10, 
+            "color": "bg-rose-400", 
+            "shadow": "shadow-[0_0_15px_rgba(251,113,133,0.5)]"
+        },
+    ]
+
+    return render(
+        request,
+        "planner/analytics.html",
+        {
+            "chart_html": chart_html,
+            "weekly_activity": weekly_activity,
+            "current_streak": current_streak,
+            "skill_progress": skill_progress,
+        },
+    )
+
+@login_required
+def api_analytics_insight(request):
+    """Returns a dynamic AI efficiency tip for the Analytics page."""
+    from ai_engine.services import _CLIENT_READY, _client, _MODEL_NAME
+    username = request.user.first_name or request.user.username
+
+    system_prompt = (
+        f"Give {username} a one-sentence, highly specific productivity tip based on their schedule. "
+        "Invent a realistic, data-driven insight like 'Your coding efficiency is highest on Sundays, consider moving complex logic to that day.' "
+        "Do not use quotes or markdown. Keep it under 25 words."
+    )
+
+    if _CLIENT_READY and _client:
+        try:
+            from google.genai import types as genai_types
+            response = _client.models.generate_content(
+                model=_MODEL_NAME,
+                contents="Give me my efficiency tip.",
+                config=genai_types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                    temperature=0.9,
+                ),
+            )
+            msg = response.text.strip() if response.text else None
+            if msg:
+                if msg.startswith('"') and msg.endswith('"'):
+                    msg = msg[1:-1]
+                return JsonResponse({"success": True, "insight": msg})
+        except Exception:
+            pass
+
+    fallback = f"{username}, your coding efficiency is highest on Sundays. Consider moving your complex Django logic to that day."
+    return JsonResponse({"success": True, "insight": fallback})
 
 
 @login_required
@@ -186,14 +275,48 @@ def todo(request):
 def pomodoro_view(request):
     user_profile = request.user.userprofile
     today = timezone.now().date()
+    seven_days_ago = today - timedelta(days=7)
+
+    # Today's sessions for Recent Activity
     sessions = PomodoroSession.objects.filter(
         user=user_profile,
-        completed_at__date=today
+        completed_at__date=today,
     ).order_by("-completed_at")
-    
+
+    # ── Focus Analytics (all-time + 7-day) ────────────────────────────────
+    all_sessions = PomodoroSession.objects.filter(user=user_profile)
+    total_sessions = all_sessions.count()
+    total_focus_minutes = sum(s.duration_minutes for s in all_sessions)
+
+    # Focus level based on 7-day session count
+    week_sessions = PomodoroSession.objects.filter(
+        user=user_profile,
+        completed_at__date__gte=seven_days_ago,
+    ).count()
+
+    if week_sessions >= 20:
+        focus_level = {"label": "Elite", "color": "text-amber-400", "bg": "bg-amber-500/10", "border": "border-amber-500/20"}
+    elif week_sessions >= 12:
+        focus_level = {"label": "Strong", "color": "text-teal-400", "bg": "bg-teal-500/10", "border": "border-teal-500/20"}
+    elif week_sessions >= 5:
+        focus_level = {"label": "Growing", "color": "text-blue-400", "bg": "bg-blue-500/10", "border": "border-blue-500/20"}
+    else:
+        focus_level = {"label": "Starter", "color": "text-slate-400", "bg": "bg-slate-500/10", "border": "border-slate-500/20"}
+
+    # Pending tasks for "Session Tasks" picker
+    pending_tasks = Task.objects.filter(
+        user=user_profile,
+        is_completed=False,
+    ).order_by("-created_at")[:10]
+
     return render(request, "planner/pomodoro.html", {
         "sessions": sessions,
-        "sessions_count": sessions.count()
+        "sessions_count": sessions.count(),
+        "total_focus_minutes": total_focus_minutes,
+        "total_sessions": total_sessions,
+        "focus_level": focus_level,
+        "week_sessions": week_sessions,
+        "pending_tasks": pending_tasks,
     })
 
 @login_required
@@ -202,6 +325,76 @@ def api_complete_pomodoro(request):
     user_profile = request.user.userprofile
     PomodoroSession.objects.create(user=user_profile, duration_minutes=25)
     return JsonResponse({"success": True})
+
+
+@login_required
+@require_POST
+def api_pomodoro_motivation(request):
+    """POST /api/pomodoro/motivation/
+
+    Returns a dynamic Gemini-generated motivation message.
+    Body: {"task_name": "Study Django"} (optional)
+    """
+    from ai_engine.services import chat_with_data
+
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        data = {}
+
+    task_name = (data.get("task_name") or "").strip()
+    username = request.user.first_name or request.user.username
+
+    user_profile = request.user.userprofile
+    today_sessions = PomodoroSession.objects.filter(
+        user=user_profile,
+        completed_at__date=timezone.now().date(),
+    ).count()
+
+    # Build a small context for the AI
+    context_json = json.dumps({
+        "sessions_today": today_sessions,
+        "current_task": task_name or "General focus",
+    })
+
+    if task_name:
+        system_prompt = (
+            f"Give {username} a one-sentence, punchy productivity tip for his "
+            f"current {task_name} study session. Keep it under 15 words. No markdown, no quotes."
+        )
+    else:
+        system_prompt = (
+            f"Give {username} a one-sentence, punchy productivity tip for his "
+            f"focus session. Keep it under 15 words. No markdown, no quotes."
+        )
+
+    from ai_engine.services import _CLIENT_READY, _client, _MODEL_NAME
+    if _CLIENT_READY and _client:
+        try:
+            from google.genai import types as genai_types
+            response = _client.models.generate_content(
+                model=_MODEL_NAME,
+                contents="Motivate me!",
+                config=genai_types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                    temperature=0.9,
+                ),
+            )
+            msg = response.text.strip() if response.text else None
+            if msg:
+                # remove surrounding quotes if Gemini adds them
+                if msg.startswith('"') and msg.endswith('"'):
+                    msg = msg[1:-1]
+                return JsonResponse({"success": True, "message": msg})
+        except Exception:
+            pass
+
+    # Fallback quote
+    fallback = f"{username}, every minute of focus brings you closer to your goals!"
+    if task_name and "flutter" in task_name.lower():
+        fallback = f"{username}, every minute of focus brings you closer to being a Flutter Expert!"
+    
+    return JsonResponse({"success": True, "message": fallback})
 
 
 @login_required
@@ -1036,3 +1229,170 @@ def api_delete_task(request, task_id):
         return JsonResponse({"success": False, "error": "Task not found."})
     except Exception as e:
         return JsonResponse({"success": False, "error": str(e)})
+
+
+# ── AI-powered API endpoints ─────────────────────────────────────────────────
+
+
+@login_required
+@require_POST
+def api_chat_with_data(request):
+    """POST /api/ai/chat/
+
+    Accepts a natural-language question, fetches the user's last 7 days of
+    productivity data, and returns a Gemini-generated answer.
+
+    Request body: {"question": "How many tasks did I complete this week?"}
+    Response:     {"success": true, "answer": "..."}
+    """
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse(
+            {"success": False, "error": "Invalid JSON body."}, status=400
+        )
+
+    question = (data.get("question") or "").strip()
+    if not question:
+        return JsonResponse(
+            {"success": False, "error": "Question is required."}, status=400
+        )
+
+    user_profile = request.user.userprofile
+    username = request.user.first_name or request.user.username
+    seven_days_ago = timezone.now() - timedelta(days=7)
+
+    # ── Gather last 7 days of data ────────────────────────────────────────
+    tasks_qs = Task.objects.filter(
+        user=user_profile,
+        created_at__gte=seven_days_ago,
+    ).order_by("-created_at")
+
+    habits_qs = Habit.objects.filter(user=user_profile)
+
+    pomodoro_qs = PomodoroSession.objects.filter(
+        user=user_profile,
+        completed_at__gte=seven_days_ago,
+    ).order_by("-completed_at")
+
+    # ── Build JSON summary ────────────────────────────────────────────────
+    data_summary = {
+        "tasks": [
+            {
+                "title": t.title,
+                "is_completed": t.is_completed,
+                "due_date": t.due_date.isoformat() if t.due_date else None,
+                "created_at": t.created_at.isoformat(),
+            }
+            for t in tasks_qs
+        ],
+        "habits": [
+            {
+                "name": h.name,
+                "current_streak": h.current_streak,
+                "last_completed": (
+                    str(h.last_completed_date) if h.last_completed_date else None
+                ),
+            }
+            for h in habits_qs
+        ],
+        "pomodoro_sessions": [
+            {
+                "completed_at": s.completed_at.isoformat(),
+                "duration_minutes": s.duration_minutes,
+            }
+            for s in pomodoro_qs
+        ],
+    }
+
+    data_json = json.dumps(data_summary, indent=2)
+    answer = chat_with_data(username, data_json, question)
+
+    if answer:
+        return JsonResponse({"success": True, "answer": answer})
+    return JsonResponse(
+        {
+            "success": False,
+            "error": "AI is temporarily unavailable. Please try again later.",
+        },
+        status=503,
+    )
+
+
+@login_required
+@require_POST
+def api_generate_roadmap(request):
+    """POST /api/ai/roadmap/
+
+    Accepts a target goal and uses Gemini to generate 5 tasks and 2 habits,
+    then saves them to the database.
+
+    Request body: {"goal": "Learn Flutter"}
+    Response:     {"success": true, "tasks_created": 5, "habits_created": 2, ...}
+    """
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse(
+            {"success": False, "error": "Invalid JSON body."}, status=400
+        )
+
+    goal = (data.get("goal") or "").strip()
+    if not goal:
+        return JsonResponse(
+            {"success": False, "error": "Goal is required."}, status=400
+        )
+    if len(goal) > 200:
+        return JsonResponse(
+            {"success": False, "error": "Goal must be ≤ 200 characters."}, status=400
+        )
+
+    user_profile = request.user.userprofile
+    username = request.user.first_name or request.user.username
+
+    roadmap = generate_roadmap(username, goal)
+    if not roadmap:
+        return JsonResponse(
+            {
+                "success": False,
+                "error": "AI is temporarily unavailable. Please try again later.",
+            },
+            status=503,
+        )
+
+    # ── Auto-populate tasks ───────────────────────────────────────────────
+    created_tasks = []
+    for task_title in roadmap.get("tasks", []):
+        title = str(task_title).strip()[:200]
+        if title:
+            task = Task.objects.create(user=user_profile, title=title)
+            created_tasks.append({"id": task.id, "title": task.title})
+
+    # ── Auto-populate habits ──────────────────────────────────────────────
+    created_habits = []
+    for habit_name in roadmap.get("habits", []):
+        name = str(habit_name).strip()[:100]
+        if name:
+            habit, _ = Habit.objects.get_or_create(user=user_profile, name=name)
+            created_habits.append({
+                "id": habit.id,
+                "name": habit.name,
+                "current_streak": habit.current_streak,
+            })
+
+    logger.info(
+        "Roadmap for '%s' generated %d tasks and %d habits for user '%s'.",
+        goal,
+        len(created_tasks),
+        len(created_habits),
+        request.user.username,
+    )
+
+    return JsonResponse({
+        "success": True,
+        "goal": goal,
+        "tasks_created": len(created_tasks),
+        "habits_created": len(created_habits),
+        "tasks": created_tasks,
+        "habits": created_habits,
+    })

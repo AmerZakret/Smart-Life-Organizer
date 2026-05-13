@@ -8,15 +8,15 @@
 <div class="w-full mx-auto space-y-6">
 
     <!-- Profile card -->
-    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
-        <div class="flex items-center gap-4 mb-6 pb-6 border-b border-slate-100">
+    <div class="bg-theme-card rounded-xl shadow-sm border border-theme-border p-6 transition-colors duration-300">
+        <div class="flex items-center gap-4 mb-6 pb-6 border-b border-theme-border">
             <div class="w-14 h-14 rounded-2xl bg-teal-600 flex items-center justify-center text-white text-xl font-bold uppercase shadow">
                 {{ user.username|slice:":1" }}
             </div>
             <div>
-                <p class="font-semibold text-slate-900 text-base">{{ user.username }}</p>
-                <p class="text-sm text-slate-400">{{ user.email }}</p>
-                <p class="text-xs text-slate-300 mt-0.5">Member since {{ user.date_joined|date:"F Y" }}</p>
+                <p class="font-semibold text-theme-text text-base">{{ user.username }}</p>
+                <p class="text-sm text-theme-text_muted">{{ user.email }}</p>
+                <p class="text-xs text-theme-text_muted opacity-70 mt-0.5">Member since {{ user.date_joined|date:"F Y" }}</p>
             </div>
         </div>
 
@@ -25,27 +25,27 @@
 
             <!-- Timezone -->
             <div>
-                <label for="timezone" class="block text-xs font-semibold text-slate-700 mb-1.5 uppercase tracking-wide">
+                <label for="timezone" class="block text-xs font-semibold text-theme-text_muted mb-1.5 uppercase tracking-wide">
                     Timezone
                 </label>
                 <input id="timezone" type="text" name="timezone" value="{{ profile.timezone }}"
-                    class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder-slate-400
-                           focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition"
+                    class="w-full px-3.5 py-2.5 rounded-xl border border-theme-border bg-theme-bg text-sm text-theme-text placeholder-theme-text_muted
+                           focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-colors"
                     placeholder="e.g. Europe/London, America/New_York">
-                <p class="text-xs text-slate-400 mt-1">Enter a valid IANA timezone name.</p>
+                <p class="text-xs text-theme-text_muted mt-1">Enter a valid IANA timezone name.</p>
             </div>
 
             <!-- AI Tone -->
             <div>
-                <label class="block text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide">
+                <label class="block text-xs font-semibold text-theme-text_muted mb-2 uppercase tracking-wide">
                     AI Tip Tone
                 </label>
-                <p class="text-xs text-slate-400 mb-3">Choose how Gemini delivers your event tips.</p>
+                <p class="text-xs text-theme-text_muted mb-3">Choose how Gemini delivers your event tips.</p>
                 <div class="grid grid-cols-3 gap-3" role="radiogroup" aria-labelledby="tone-label">
                     {% for value, label in tones %}
                     <label for="tone-{{ value }}"
-                        class="flex flex-col items-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all
-                               {% if profile.ai_tone == value %}border-teal-500 bg-teal-50{% else %}border-slate-100 hover:border-slate-300 bg-white{% endif %}">
+                        class="flex flex-col items-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-colors
+                               {% if profile.ai_tone == value %}border-teal-500 bg-teal-500/10{% else %}border-theme-border hover:border-teal-500/50 bg-theme-bg{% endif %}">
                         <input type="radio" id="tone-{{ value }}" name="ai_tone" value="{{ value }}"
                                {% if profile.ai_tone == value %}checked{% endif %} class="sr-only">
                         <span class="text-xl">
@@ -53,7 +53,7 @@
                             {% elif value == 'direct' %}⚡
                             {% else %}💼{% endif %}
                         </span>
-                        <span class="text-xs font-semibold text-slate-700">{{ label }}</span>
+                        <span class="text-xs font-semibold text-theme-text">{{ label }}</span>
                     </label>
                     {% endfor %}
                 </div>
@@ -70,39 +70,39 @@
     </div>
 
     <!-- Category Management -->
-    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+    <div class="bg-theme-card rounded-xl shadow-sm border border-theme-border p-6 transition-colors duration-300">
         <div class="flex items-center justify-between mb-4">
             <div>
-                <h2 class="text-sm font-semibold text-slate-800 mb-1">Categories</h2>
-                <p class="text-xs text-slate-400">Manage your event categories here.</p>
+                <h2 class="text-sm font-semibold text-theme-text mb-1">Categories</h2>
+                <p class="text-xs text-theme-text_muted">Manage your event categories here.</p>
             </div>
         </div>
         <div class="space-y-3">
             {% for cat in categories %}
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50" id="cat-row-{{ cat.pk }}">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl border border-theme-border bg-theme-bg" id="cat-row-{{ cat.pk }}">
                 <div class="flex items-center gap-3">
-                    <input type="color" id="cat-color-{{ cat.pk }}" value="{{ cat.color|default:'#0d9488' }}" class="w-8 h-8 rounded shrink-0 border border-slate-200 cursor-pointer" />
-                    <input type="text" id="cat-name-{{ cat.pk }}" value="{{ cat.name }}" class="px-3 py-1.5 rounded-lg border border-slate-200 text-sm font-medium focus:ring-1 focus:ring-teal-500 w-full sm:w-auto" />
+                    <input type="color" id="cat-color-{{ cat.pk }}" value="{{ cat.color|default:'#0d9488' }}" class="w-8 h-8 rounded shrink-0 border border-theme-border cursor-pointer" />
+                    <input type="text" id="cat-name-{{ cat.pk }}" value="{{ cat.name }}" class="px-3 py-1.5 rounded-lg border border-theme-border bg-theme-card text-theme-text text-sm font-medium focus:ring-1 focus:ring-teal-500 w-full sm:w-auto" />
                 </div>
                 <div class="flex items-center gap-2 shrink-0">
-                    <button type="button" onclick="saveCategory({{ cat.pk }})" class="text-xs font-semibold text-teal-600 hover:text-teal-700 hover:bg-teal-50 px-3 py-1.5 rounded-lg transition-colors">Save</button>
-                    <button type="button" onclick="deleteCategory({{ cat.pk }}, '{{ cat.name|escapejs }}')" class="text-xs font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors">Delete</button>
+                    <button type="button" onclick="saveCategory({{ cat.pk }})" class="text-xs font-semibold text-teal-500 hover:text-teal-400 hover:bg-teal-500/10 px-3 py-1.5 rounded-lg transition-colors">Save</button>
+                    <button type="button" onclick="deleteCategory({{ cat.pk }}, '{{ cat.name|escapejs }}')" class="text-xs font-semibold text-red-500 hover:text-red-400 hover:bg-red-500/10 px-3 py-1.5 rounded-lg transition-colors">Delete</button>
                 </div>
             </div>
             {% empty %}
-            <p class="text-sm text-slate-400 italic text-center py-4">No custom categories yet. Create some from the calendar!</p>
+            <p class="text-sm text-theme-text_muted italic text-center py-4">No custom categories yet. Create some from the calendar!</p>
             {% endfor %}
         </div>
     </div>
 
     <!-- Danger zone placeholder -->
-    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
-        <h2 class="text-sm font-semibold text-slate-800 mb-1">Account</h2>
-        <p class="text-xs text-slate-400 mb-4">Manage your account and session.</p>
+    <div class="bg-theme-card rounded-xl shadow-sm border border-theme-border p-6 transition-colors duration-300">
+        <h2 class="text-sm font-semibold text-theme-text mb-1">Account</h2>
+        <p class="text-xs text-theme-text_muted mb-4">Manage your account and session.</p>
         <form method="post" action="{% url 'logout' %}">
             {% csrf_token %}
             <button id="btn-logout-settings" type="submit"
-                class="flex items-center gap-2 px-4 py-2 rounded-xl border border-red-100 text-red-600 text-sm font-medium hover:bg-red-50 transition-colors">
+                class="flex items-center gap-2 px-4 py-2 rounded-xl border border-red-500/20 text-red-500 text-sm font-medium hover:bg-red-500/10 transition-colors">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
                 </svg>
@@ -121,12 +121,12 @@ document.querySelectorAll('[name="ai_tone"]').forEach(radio => {
     radio.addEventListener('change', () => {
         document.querySelectorAll('[name="ai_tone"]').forEach(r => {
             const card = r.closest('label');
-            card.classList.remove('border-teal-500', 'bg-teal-50');
-            card.classList.add('border-slate-100', 'bg-white');
+            card.classList.remove('border-teal-500', 'bg-teal-500/10');
+            card.classList.add('border-theme-border', 'bg-theme-bg');
         });
         const selected = radio.closest('label');
-        selected.classList.add('border-teal-500', 'bg-teal-50');
-        selected.classList.remove('border-slate-100', 'bg-white');
+        selected.classList.add('border-teal-500', 'bg-teal-500/10');
+        selected.classList.remove('border-theme-border', 'bg-theme-bg');
     });
 });
 
