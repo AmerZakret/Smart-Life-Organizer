@@ -5,50 +5,50 @@
 
 {% block content %}
 <div class="max-w-4xl mx-auto space-y-6">
-    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+    <div class="bg-theme-card rounded-xl shadow-sm border border-theme-border p-6 transition-colors duration-300">
         <div class="flex items-center justify-between mb-6">
-            <h2 class="text-lg font-bold text-slate-800">Your Habits</h2>
-            <span class="text-sm font-medium text-slate-500 bg-slate-100 rounded-full px-3 py-1">{{ habits.count }} active</span>
+            <h2 class="text-lg font-bold text-theme-text">Your Habits</h2>
+            <span class="text-sm font-medium text-theme-text_muted bg-theme-bg border border-theme-border rounded-full px-3 py-1">{{ habits.count }} active</span>
         </div>
         <div class="mb-6">
             <form id="create-habit-form" class="flex gap-3">
                 <input id="habit-name-input" type="text" placeholder="Add a new habit (e.g., Read 20 pages)"
-                    class="flex-1 px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                    class="flex-1 px-4 py-3 rounded-xl border border-theme-border bg-theme-bg text-sm text-theme-text placeholder-theme-text_muted focus:outline-none focus:ring-2 focus:ring-amber-400 transition-colors" />
                 <button id="btn-create-habit" type="button" class="px-6 py-3 rounded-xl bg-amber-500 hover:bg-amber-600 transition-colors text-white text-sm font-bold shadow-sm">Add Habit</button>
             </form>
         </div>
 
-        <div class="space-y-3" id="habits-list">
+        <div class="space-y-3 custom-scrollbar" id="habits-list">
             {% for habit in habits %}
-            <div class="flex items-center justify-between p-4 rounded-xl border border-slate-100 hover:border-teal-100 hover:bg-teal-50/30 transition-colors"
+            <div class="flex items-center justify-between p-4 rounded-xl border border-theme-border hover:border-teal-500/30 hover:bg-teal-500/10 transition-colors"
                  id="habit-row-{{ habit.id }}">
                 <div class="flex items-center gap-4 min-w-0">
                     <button id="habit-toggle-{{ habit.id }}"
                         onclick="toggleHabit({{ habit.id }})"
-                        class="w-10 h-10 rounded-xl border-2 border-slate-200 flex items-center justify-center text-white shrink-0 transition-all
-                               hover:border-teal-500 hover:bg-teal-50"
+                        class="w-10 h-10 rounded-xl border-2 border-slate-300 dark:border-slate-600 flex items-center justify-center text-white shrink-0 transition-all
+                               hover:border-teal-500 hover:bg-teal-500/20"
                         aria-label="Toggle habit {{ habit.name }}">
                     </button>
                     <div class="min-w-0">
-                        <p class="text-base font-semibold text-slate-800 truncate">{{ habit.name }}</p>
-                        <p class="text-xs text-slate-400 mt-0.5">Last completed: {{ habit.last_completed_date|default:"Never" }}</p>
+                        <p class="text-base font-semibold text-theme-text truncate">{{ habit.name }}</p>
+                        <p class="text-xs text-theme-text_muted mt-0.5">Last completed: {{ habit.last_completed_date|default:"Never" }}</p>
                     </div>
                 </div>
                 <div class="flex items-center gap-6">
                     <div class="text-right shrink-0">
-                        <p class="text-2xl font-bold text-slate-900 leading-none" id="streak-{{ habit.id }}">{{ habit.current_streak }}</p>
+                        <p class="text-2xl font-bold text-theme-text leading-none" id="streak-{{ habit.id }}">{{ habit.current_streak }}</p>
                         <p class="text-xs text-amber-500 font-bold tracking-wide uppercase mt-1">Streak 🔥</p>
                     </div>
-                    <button onclick="deleteHabit({{ habit.id }})" class="text-sm font-medium text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-2 rounded-lg transition-colors shrink-0">Delete</button>
+                    <button onclick="deleteHabit({{ habit.id }})" class="text-sm font-medium text-red-500 hover:text-red-700 hover:bg-red-500/10 px-3 py-2 rounded-lg transition-colors shrink-0">Delete</button>
                 </div>
             </div>
             {% empty %}
             <div class="text-center py-12" id="habits-empty-state">
-                <svg class="w-12 h-12 text-slate-200 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg class="w-12 h-12 text-theme-text_muted opacity-30 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                 </svg>
-                <p class="text-base font-medium text-slate-600">No habits tracked yet.</p>
-                <p class="text-sm text-slate-400 mt-1">Start building good routines today.</p>
+                <p class="text-base font-medium text-theme-text">No habits tracked yet.</p>
+                <p class="text-sm text-theme-text_muted mt-1">Start building good routines today.</p>
             </div>
             {% endfor %}
         </div>

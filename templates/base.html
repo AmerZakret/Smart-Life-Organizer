@@ -7,13 +7,29 @@
     <title>{% block title %}Smart Life Organizer{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
+        // Check local storage before Tailwind loads to prevent FOUC
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+
         tailwind.config = {
+            darkMode: 'class',
             theme: {
                 extend: {
                     fontFamily: {
                         sans: ['Inter', 'ui-sans-serif', 'system-ui'],
                     },
                     colors: {
+                        theme: {
+                            bg: 'var(--theme-bg)',
+                            card: 'var(--theme-card)',
+                            sidebar: 'var(--theme-sidebar)',
+                            text: 'var(--theme-text)',
+                            text_muted: 'var(--theme-text-muted)',
+                            border: 'var(--theme-border)',
+                        },
                         brand: {
                             50:  '#f0fdfa',
                             100: '#ccfbf1',
@@ -28,31 +44,60 @@
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --theme-bg: #f1f5f9;
+            --theme-card: #ffffff;
+            --theme-sidebar: #ffffff;
+            --theme-text: #1e293b;
+            --theme-text-muted: #64748b;
+            --theme-border: rgba(0, 0, 0, 0.05);
+            --theme-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            /* Toggle specific colors */
+            --toggle-bg: #f59e0b; /* amber-500 */
+        }
+        html.dark {
+            --theme-bg: #0f172a;
+            --theme-card: #1e293b;
+            --theme-sidebar: #0f172a;
+            --theme-text: #f8fafc;
+            --theme-text-muted: #94a3b8;
+            --theme-border: rgba(255, 255, 255, 0.05);
+            --theme-shadow: 0 4px 20px rgba(13, 148, 136, 0.15);
+            /* Toggle specific colors */
+            --toggle-bg: #4f46e5; /* indigo-600 */
+        }
+        /* Custom scrollbar for theme */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--theme-bg); }
+        ::-webkit-scrollbar-thumb { background: var(--theme-border); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #0d9488; }
+    </style>
     {% block extra_head %}{% endblock %}
 </head>
-<body class="h-full bg-slate-50 font-sans text-slate-900 antialiased">
+<body class="h-full bg-theme-bg font-sans text-theme-text antialiased transition-colors duration-300">
 
 {% if user.is_authenticated %}
 <!-- ── Sidebar Layout ── -->
 <div class="flex h-full min-h-screen">
 
     <!-- Sidebar -->
-    <aside id="sidebar" class="flex flex-col w-64 shrink-0 bg-slate-900 shadow-xl">
+    <aside id="sidebar" class="flex flex-col w-64 shrink-0 bg-theme-sidebar shadow-xl border-r border-theme-border transition-colors duration-300 z-20">
         <!-- Logo -->
-        <div class="flex items-center gap-3 px-6 py-5 border-b border-slate-700">
+        <div class="flex items-center gap-3 px-6 py-5 border-b border-theme-border">
             <div class="flex items-center justify-center w-9 h-9 rounded-xl bg-teal-600">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M11.25 4.533A9.707 9.707 0 006 3a9.735 9.735 0 00-3.25.555.75.75 0 00-.5.707v14.25a.75.75 0 001 .707A8.237 8.237 0 016 18.75c1.995 0 3.823.707 5.25 1.878V4.533zM12.75 20.628A8.244 8.244 0 0118 18.75c.966 0 1.89.166 2.75.47a.75.75 0 001-.708V4.262a.75.75 0 00-.5-.707A9.735 9.735 0 0018 3a9.707 9.707 0 00-5.25 1.533v16.095z"/>
                 </svg>
             </div>
-            <span class="text-white font-semibold text-sm leading-tight">Smart Life<br><span class="text-teal-400 font-light">Organizer</span></span>
+            <span class="text-theme-text font-semibold text-sm leading-tight transition-colors duration-300">Smart Life<br><span class="text-teal-500 font-light">Organizer</span></span>
         </div>
 
         <!-- Nav links -->
         <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
             <a href="{% url 'dashboard' %}"
                class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
-                      {% if request.resolver_match.url_name == 'dashboard' %}bg-teal-600 text-white{% else %}text-slate-400 hover:bg-slate-800 hover:text-white{% endif %}">
+                      {% if request.resolver_match.url_name == 'dashboard' %}bg-teal-600 text-white{% else %}text-theme-text_muted hover:bg-theme-border hover:text-theme-text{% endif %}">
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
                 </svg>
@@ -60,7 +105,7 @@
             </a>
             <a href="{% url 'calendar' %}"
                class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
-                      {% if request.resolver_match.url_name == 'calendar' %}bg-teal-600 text-white{% else %}text-slate-400 hover:bg-slate-800 hover:text-white{% endif %}">
+                      {% if request.resolver_match.url_name == 'calendar' %}bg-teal-600 text-white{% else %}text-theme-text_muted hover:bg-theme-border hover:text-theme-text{% endif %}">
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                 </svg>
@@ -68,7 +113,7 @@
             </a>
             <a href="{% url 'growth' %}"
                class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
-                      {% if request.resolver_match.url_name == 'growth' %}bg-teal-600 text-white{% else %}text-slate-400 hover:bg-slate-800 hover:text-white{% endif %}">
+                      {% if request.resolver_match.url_name == 'growth' %}bg-teal-600 text-white{% else %}text-theme-text_muted hover:bg-theme-border hover:text-theme-text{% endif %}">
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                 </svg>
@@ -76,7 +121,7 @@
             </a>
             <a href="{% url 'pomodoro' %}"
                class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
-                      {% if request.resolver_match.url_name == 'pomodoro' %}bg-teal-600 text-white{% else %}text-slate-400 hover:bg-slate-800 hover:text-white{% endif %}">
+                      {% if request.resolver_match.url_name == 'pomodoro' %}bg-teal-600 text-white{% else %}text-theme-text_muted hover:bg-theme-border hover:text-theme-text{% endif %}">
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
@@ -84,7 +129,7 @@
             </a>
             <a href="{% url 'analytics' %}"
                class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
-                      {% if request.resolver_match.url_name == 'analytics' %}bg-teal-600 text-white{% else %}text-slate-400 hover:bg-slate-800 hover:text-white{% endif %}">
+                      {% if request.resolver_match.url_name == 'analytics' %}bg-teal-600 text-white{% else %}text-theme-text_muted hover:bg-theme-border hover:text-theme-text{% endif %}">
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 13h2v8H3zM9 9h2v12H9zM15 5h2v16h-2zM21 1h2v20h-2z"/>
                 </svg>
@@ -92,7 +137,7 @@
             </a>
             <a href="{% url 'settings' %}"
                class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors
-                      {% if request.resolver_match.url_name == 'settings' %}bg-teal-600 text-white{% else %}text-slate-400 hover:bg-slate-800 hover:text-white{% endif %}">
+                      {% if request.resolver_match.url_name == 'settings' %}bg-teal-600 text-white{% else %}text-theme-text_muted hover:bg-theme-border hover:text-theme-text{% endif %}">
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -102,19 +147,19 @@
         </nav>
 
         <!-- User footer -->
-        <div class="px-4 py-4 border-t border-slate-700">
+        <div class="px-4 py-4 border-t border-theme-border">
             <div class="flex items-center gap-3 mb-3">
                 <div class="w-8 h-8 rounded-full bg-teal-600 flex items-center justify-center text-white text-xs font-bold uppercase">
                     {{ user.username|slice:":1" }}
                 </div>
                 <div class="overflow-hidden">
-                    <p class="text-white text-xs font-medium truncate">{{ user.username }}</p>
-                    <p class="text-slate-500 text-xs truncate">{{ user.email }}</p>
+                    <p class="text-theme-text text-xs font-medium truncate">{{ user.username }}</p>
+                    <p class="text-theme-text_muted text-xs truncate">{{ user.email }}</p>
                 </div>
             </div>
             <form method="post" action="{% url 'logout' %}">
                 {% csrf_token %}
-                <button type="submit" class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white text-xs font-medium transition-colors">
+                <button type="submit" class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-theme-text_muted hover:bg-theme-border hover:text-theme-text text-xs font-medium transition-colors">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
                     </svg>
@@ -125,18 +170,38 @@
     </aside>
 
     <!-- Main content area -->
-    <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+    <div class="flex-1 flex flex-col min-w-0 overflow-hidden relative z-10">
         <!-- Top bar -->
-        <header class="bg-white border-b border-slate-100 px-8 py-4 flex items-center justify-between shrink-0">
+        <header class="bg-theme-card border-b border-theme-border px-8 py-4 flex items-center justify-between shrink-0 transition-colors duration-300">
             <div>
-                <h1 class="text-xl font-semibold text-slate-900">{% block page_title %}{% endblock %}</h1>
-                <p class="text-xs text-slate-500 mt-0.5">{% block page_subtitle %}{% endblock %}</p>
+                <h1 class="text-xl font-semibold text-theme-text">{% block page_title %}{% endblock %}</h1>
+                <p class="text-xs text-theme-text_muted mt-0.5">{% block page_subtitle %}{% endblock %}</p>
             </div>
-            <div class="flex items-center gap-2 text-xs text-slate-400">
-                <svg class="w-4 h-4 text-teal-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-                <span id="live-clock"></span>
+            
+            <div class="flex items-center gap-6">
+                <!-- Animated Theme Toggle -->
+                <button id="theme-toggle" class="relative w-16 h-8 rounded-full flex items-center px-1 transition-colors duration-500 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2" style="background-color: var(--toggle-bg);">
+                    <!-- Slider -->
+                    <div id="theme-slider" class="absolute left-1 w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-400 ease-[cubic-bezier(0.68,-0.55,0.27,1.55)] dark:translate-x-8"></div>
+                    
+                    <!-- Sun Icon (Left) -->
+                    <div class="w-full h-full flex justify-between items-center px-1.5 pointer-events-none">
+                        <svg class="w-4 h-4 text-white opacity-100 dark:opacity-0 transition-opacity duration-300" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4.22 4.22a1 1 0 011.415 0l.708.708a1 1 0 01-1.414 1.414l-.708-.708a1 1 0 010-1.414zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zm-4.22 4.22a1 1 0 010 1.415l-.708.708a1 1 0 01-1.414-1.414l.708-.708a1 1 0 011.415 0zM10 16a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zm-4.22-4.22a1 1 0 01-1.415 0l-.708-.708a1 1 0 011.414-1.414l.708.708a1 1 0 010 1.414zM2 10a1 1 0 011-1h1a1 1 0 110 2H3a1 1 0 01-1-1zm4.22-4.22a1 1 0 010-1.415l.708-.708a1 1 0 011.414 1.414l-.708.708a1 1 0 01-1.415 0zM10 5a5 5 0 100 10 5 5 0 000-10z" clip-rule="evenodd" />
+                        </svg>
+                        <!-- Moon Icon (Right) -->
+                        <svg class="w-4 h-4 text-white opacity-0 dark:opacity-100 transition-opacity duration-300" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+                        </svg>
+                    </div>
+                </button>
+
+                <div class="flex items-center gap-2 text-xs text-theme-text_muted border-l border-theme-border pl-6 transition-colors duration-300">
+                    <svg class="w-4 h-4 text-teal-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span id="live-clock"></span>
+                </div>
             </div>
         </header>
 
@@ -192,6 +257,23 @@
     tick();
     setInterval(tick, 1000);
 })();
+
+// Dark Mode Toggle Logic
+document.addEventListener('DOMContentLoaded', () => {
+    const themeToggleBtn = document.getElementById('theme-toggle');
+    if (themeToggleBtn) {
+        themeToggleBtn.addEventListener('click', () => {
+            const html = document.documentElement;
+            html.classList.toggle('dark');
+            
+            const isDark = html.classList.contains('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            
+            // Dispatch a custom event so charts can dynamically update
+            window.dispatchEvent(new Event('themeChanged'));
+        });
+    }
+});
 </script>
 {% block extra_scripts %}{% endblock %}
 </body>

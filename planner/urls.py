@@ -59,6 +59,15 @@ urlpatterns = [
         views.api_complete_pomodoro,
         name="api-complete-pomodoro",
     ),
+    path(
+        "api/pomodoro/motivation/",
+        views.api_pomodoro_motivation,
+        name="api-pomodoro-motivation",
+    ),
+    # ── AI-powered API endpoints ─────────────────────────────────────────
+    path("api/ai/chat/", views.api_chat_with_data, name="api-ai-chat"),
+    path("api/ai/roadmap/", views.api_generate_roadmap, name="api-ai-roadmap"),
+    path("api/ai/analytics-insight/", views.api_analytics_insight, name="api-analytics-insight"),
     path("export/csv/", views.export_csv, name="export-csv"),
     path("export/ics/", views.export_ics, name="export-ics"),
     path("import/", views.import_events, name="import-events"),

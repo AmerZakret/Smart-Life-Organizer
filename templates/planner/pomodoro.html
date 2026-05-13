@@ -4,85 +4,179 @@
 {% block page_subtitle %}Focus on your tasks with the Pomodoro technique{% endblock %}
 
 {% block content %}
-<div class="min-h-[80vh] flex flex-col justify-center space-y-12 py-10">
-    <!-- Timer Section (Top Center) -->
-    <div class="flex flex-col items-center">
-        <div class="bg-slate-900 rounded-[3rem] shadow-2xl border border-teal-500/10 p-12 max-w-md w-full text-center relative overflow-hidden">
-            <!-- Glassmorphism overlay -->
-            <div class="absolute inset-0 bg-gradient-to-br from-teal-500/5 to-transparent pointer-events-none"></div>
-            
-            <div class="absolute top-0 left-0 w-full h-1.5 bg-slate-800">
-                <div id="progress-bar" class="h-full bg-teal-500 shadow-[0_0_15px_rgba(20,184,166,0.5)] transition-all duration-1000" style="width: 0%"></div>
+<div class="min-h-[calc(100vh-140px)] flex flex-col justify-start gap-8 py-6 max-w-6xl mx-auto w-full">
+    
+    <!-- Top Row: Timer & AI Coach (Side by Side, Same Height) -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
+        
+        <!-- Timer Section (col-span-2) -->
+        <div class="lg:col-span-2 h-full flex flex-col">
+            <div id="timer-container" class="bg-theme-card rounded-[3rem] border border-theme-border p-12 text-center relative overflow-hidden flex-1 flex flex-col items-center justify-center transition-all duration-700 ease-in-out" style="box-shadow: var(--theme-shadow);">
+                <!-- Glassmorphism overlay -->
+                <div class="absolute inset-0 bg-gradient-to-br from-teal-500/5 to-transparent pointer-events-none"></div>
+                
+                <div class="absolute top-0 left-0 w-full h-1.5 bg-black/10 dark:bg-slate-800">
+                    <div id="progress-bar" class="h-full bg-teal-500 shadow-[0_0_20px_rgba(20,184,166,0.6)] transition-all duration-1000" style="width: 0%"></div>
+                </div>
+                
+                <h2 id="timer-mode" class="text-sm font-black text-teal-500 uppercase tracking-[0.5em] mb-6 relative z-10 mt-4">Focus Session</h2>
+                
+                <div class="text-[7rem] md:text-[9rem] font-black text-theme-text tabular-nums tracking-tighter mb-10 selection:bg-teal-500/30 relative z-10 leading-none drop-shadow-2xl" id="timer-display">
+                    25:00
+                </div>
+                
+                <div class="flex items-center justify-center gap-6 relative z-10 mb-4">
+                    <button id="btn-toggle" class="bg-teal-600 hover:bg-teal-500 text-white font-black py-4 px-12 rounded-2xl shadow-lg shadow-teal-900/50 transition-all duration-300 hover:-translate-y-1 active:scale-95 w-40 uppercase tracking-widest text-xs">Start</button>
+                    <button id="btn-reset" class="bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-theme-text_muted font-black py-4 px-12 rounded-2xl transition-all duration-300 hover:-translate-y-1 active:scale-95 w-40 uppercase tracking-widest text-xs">Reset</button>
+                </div>
             </div>
-            
-            <h2 id="timer-mode" class="text-xs font-black text-teal-500 uppercase tracking-[0.4em] mb-6 relative z-10">Focus Session</h2>
-            <div class="text-[7rem] font-black text-white tabular-nums tracking-tighter mb-10 selection:bg-teal-500/30 relative z-10" id="timer-display">
-                25:00
-            </div>
-            
-            <div class="flex items-center justify-center gap-6 relative z-10">
-                <button id="btn-toggle" class="bg-teal-600 hover:bg-teal-500 text-white font-black py-4 px-12 rounded-2xl shadow-lg shadow-teal-900/40 transition-all active:scale-95 w-40 uppercase tracking-widest text-xs">Start</button>
-                <button id="btn-reset" class="bg-slate-800 hover:bg-slate-700 text-slate-400 font-black py-4 px-12 rounded-2xl transition-all active:scale-95 w-40 uppercase tracking-widest text-xs">Reset</button>
+        </div>
+
+        <!-- AI Motivation Card (col-span-1) -->
+        <div class="lg:col-span-1 h-full flex flex-col">
+            <div class="rounded-[3rem] p-8 flex-1 flex flex-col relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 bg-theme-card border border-theme-border" style="box-shadow: var(--theme-shadow);">
+                <div class="absolute inset-0 bg-gradient-to-br from-transparent to-black/5 dark:from-slate-800 dark:to-slate-900 pointer-events-none"></div>
+                <div class="absolute -top-10 -right-10 w-40 h-40 bg-teal-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                
+                <div class="flex items-center gap-4 mb-6 relative z-10">
+                    <div class="w-10 h-10 rounded-xl bg-teal-500/20 flex items-center justify-center border border-teal-500/30">
+                        <svg class="w-5 h-5 text-teal-500 dark:text-teal-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-black text-theme-text uppercase tracking-widest">AI Coach</h3>
+                        <p class="text-[10px] text-teal-600 dark:text-teal-200/60 uppercase tracking-widest">Powered by Gemini</p>
+                    </div>
+                </div>
+
+                <div class="flex-1 flex flex-col justify-center relative z-10" style="overflow: visible;">
+                    <div id="ai-motivation-content" class="text-center" style="word-wrap: break-word; overflow-wrap: break-word;">
+                        <p class="text-theme-text_muted text-sm italic">"Ready to focus? Select a task, start the timer, and let's get to work."</p>
+                    </div>
+                    <div id="ai-motivation-loading" class="hidden flex-col items-center justify-center gap-4">
+                        <svg class="animate-spin w-8 h-8 text-teal-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <p class="text-[10px] text-teal-400 uppercase tracking-widest font-bold">Generating...</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Bottom Section: Focus & Motivation (Symmetrical Grid) -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto w-full">
-        <!-- Focus Music Card -->
-        <div class="bg-slate-900 rounded-3xl shadow-xl border border-teal-500/10 p-8 flex flex-col h-full min-h-[320px]">
-            <div class="flex items-center gap-4 mb-6">
-                <div class="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20">
-                    <svg class="w-6 h-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+    <!-- Bottom Row: 3 Column Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
+        
+        <!-- 1. Session Task Checklist -->
+        <div class="bg-theme-card rounded-[2.5rem] border border-theme-border p-8 relative overflow-hidden flex flex-col h-full min-h-[340px] transition-all duration-300 hover:border-teal-500/20 hover:-translate-y-1" style="box-shadow: var(--theme-shadow);">
+            <h3 class="text-sm font-black text-theme-text uppercase tracking-widest mb-6 flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center border border-teal-500/20">
+                    <svg class="w-5 h-5 text-teal-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                     </svg>
                 </div>
-                <div>
-                    <h3 class="text-sm font-black text-white uppercase tracking-widest">Focus Radio</h3>
-                    <p class="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">Live Lo-fi Beats</p>
-                </div>
-            </div>
-            <div class="flex-1 rounded-2xl overflow-hidden bg-black shadow-2xl relative group">
-                <iframe width="100%" height="100%" src="https://www.youtube.com/embed/jfKfPfyJRdk?controls=1&showinfo=0&rel=0&autoplay=0" title="Focus Radio" frameborder="0" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen class="absolute inset-0"></iframe>
-            </div>
-        </div>
-
-        <!-- Recent Sessions Card -->
-        <div class="bg-slate-900 rounded-3xl shadow-xl border border-teal-500/10 p-8 flex flex-col h-full min-h-[320px]">
-            <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-800">
-                <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-2xl bg-teal-500/10 flex items-center justify-center border border-teal-500/20">
-                        <svg class="w-6 h-6 text-teal-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                    </div>
-                    <h3 class="text-sm font-black text-white uppercase tracking-widest">Recent Activity</h3>
-                </div>
-                <div class="px-4 py-2 bg-teal-500/10 border border-teal-500/20 rounded-xl">
-                    <span class="text-xs font-black text-teal-400 uppercase tracking-tighter">{{ sessions_count }} Done</span>
-                </div>
-            </div>
-            
-            <div class="flex-1 overflow-y-auto max-h-[180px] pr-2 space-y-3 custom-scrollbar" id="session-history">
-                {% for session in sessions %}
-                <div class="flex items-center justify-between p-4 rounded-2xl bg-slate-800/40 border border-slate-800 hover:border-teal-500/30 transition-all group">
-                    <div class="flex items-center gap-4">
-                        <div class="w-2.5 h-2.5 rounded-full bg-teal-500 shadow-[0_0_8px_rgba(20,184,166,0.5)]"></div>
-                        <p class="text-sm font-bold text-slate-300">Productive Session</p>
-                    </div>
-                    <p class="text-[10px] text-slate-500 font-black uppercase tracking-widest">{{ session.completed_at|time:"H:i" }}</p>
-                </div>
+                Session Task
+            </h3>
+            <div class="space-y-3 flex-1 overflow-y-auto custom-scrollbar pr-2 max-h-[180px]">
+                {% for task in pending_tasks %}
+                <label class="flex items-center gap-4 p-4 rounded-2xl bg-black/5 dark:bg-slate-800/40 border border-theme-border cursor-pointer hover:border-teal-500/30 transition-all duration-300 group">
+                    <input type="radio" name="session_task" value="{{ task.title }}" class="hidden peer">
+                    <div class="w-5 h-5 rounded-full border-2 border-slate-400 dark:border-slate-600 peer-checked:border-teal-500 peer-checked:bg-teal-500 flex items-center justify-center transition-all duration-300"></div>
+                    <span class="text-sm font-medium text-theme-text peer-checked:text-teal-600 dark:peer-checked:text-teal-400 transition-colors truncate">{{ task.title }}</span>
+                </label>
                 {% empty %}
-                <div class="flex flex-col items-center justify-center h-full text-center py-6">
-                    <p class="text-xs text-slate-500 font-bold uppercase tracking-widest italic">No activity recorded today</p>
+                <div class="flex items-center justify-center h-full text-center py-6">
+                    <p class="text-xs text-theme-text_muted font-bold italic tracking-widest uppercase">No pending tasks.</p>
                 </div>
                 {% endfor %}
             </div>
         </div>
+
+        <!-- 2. Focus Radio -->
+        <div class="bg-theme-card rounded-[2.5rem] border border-theme-border p-8 flex flex-col h-full min-h-[340px] transition-all duration-300 hover:-translate-y-1" style="box-shadow: var(--theme-shadow);">
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20">
+                    <svg class="w-5 h-5 text-indigo-500 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-sm font-black text-theme-text uppercase tracking-widest">Focus Radio</h3>
+                    <p class="text-[10px] text-theme-text_muted font-bold uppercase tracking-tighter">Productivity Playlist</p>
+                </div>
+            </div>
+            <div class="flex-1 rounded-[1.5rem] overflow-hidden bg-black shadow-inner relative group">
+                <iframe width="100%" height="100%" src="https://www.youtube.com/embed/videoseries?list=PLOzDu-MXXLliO9fBNZOQTBDddoA3FzZUo&autoplay=0" title="Focus Radio" frameborder="0" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen class="absolute inset-0"></iframe>
+            </div>
+        </div>
+
+        <!-- 3. Focus Analytics -->
+        <div class="bg-theme-card rounded-[2.5rem] border border-theme-border p-8 flex flex-col h-full min-h-[340px] transition-all duration-300 hover:-translate-y-1" style="box-shadow: var(--theme-shadow);">
+            <div class="flex items-center justify-between mb-8 pb-4 border-b border-theme-border">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center border border-teal-500/20">
+                        <svg class="w-5 h-5 text-teal-500 dark:text-teal-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-sm font-black text-theme-text uppercase tracking-widest">Analytics</h3>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-3 gap-3 mb-6">
+                <!-- Total Focus Time -->
+                <div class="bg-black/5 dark:bg-slate-800/40 rounded-2xl p-4 flex flex-col items-center justify-center text-center border border-theme-border transition-all">
+                    <span class="text-[9px] text-theme-text_muted font-bold uppercase tracking-widest mb-1">Time</span>
+                    <p class="text-xl font-black text-theme-text">{{ total_focus_minutes }}<span class="text-xs text-theme-text_muted font-medium ml-1">m</span></p>
+                </div>
+                <!-- Sessions Completed -->
+                <div class="bg-black/5 dark:bg-slate-800/40 rounded-2xl p-4 flex flex-col items-center justify-center text-center border border-theme-border transition-all">
+                    <span class="text-[9px] text-theme-text_muted font-bold uppercase tracking-widest mb-1">Sessions</span>
+                    <p class="text-xl font-black text-theme-text">{{ total_sessions }}</p>
+                </div>
+                <!-- Focus Level -->
+                <div class="{{ focus_level.bg }} rounded-2xl p-4 flex flex-col items-center justify-center text-center border {{ focus_level.border }} transition-all hover:opacity-80">
+                    <span class="text-[9px] {{ focus_level.color }} opacity-80 font-bold uppercase tracking-widest mb-1">Level</span>
+                    <p class="text-xs font-black {{ focus_level.color }} uppercase tracking-widest mt-1">{{ focus_level.label }}</p>
+                </div>
+            </div>
+
+            <h4 class="text-[10px] font-black text-theme-text_muted uppercase tracking-widest mb-3">Today's Log</h4>
+            <div class="flex-1 overflow-y-auto max-h-[80px] pr-2 space-y-3 custom-scrollbar" id="session-history">
+                {% for session in sessions %}
+                <div class="flex items-center justify-between p-3.5 rounded-2xl bg-black/5 dark:bg-slate-800/40 border border-theme-border hover:border-teal-500/30 transition-all group">
+                    <div class="flex items-center gap-4">
+                        <div class="w-2.5 h-2.5 rounded-full bg-teal-500 shadow-[0_0_8px_rgba(20,184,166,0.5)]"></div>
+                        <p class="text-xs font-bold text-theme-text">Productive Session</p>
+                    </div>
+                    <p class="text-[10px] text-theme-text_muted font-bold uppercase tracking-widest">{{ session.completed_at|time:"H:i" }}</p>
+                </div>
+                {% empty %}
+                <div class="flex flex-col items-center justify-center h-full text-center py-2">
+                    <p class="text-[10px] text-theme-text_muted font-bold uppercase tracking-widest italic">No activity yet</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
     </div>
 </div>
 
 <style>
+    /* Pulse Shadow for Running Timer */
+    @keyframes pulse-shadow {
+        0% { box-shadow: 0 0 0 0 rgba(20, 184, 166, 0.4); }
+        70% { box-shadow: 0 0 0 30px rgba(20, 184, 166, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(20, 184, 166, 0); }
+    }
+    .timer-running {
+        animation: pulse-shadow 2s infinite;
+        border-color: rgba(20, 184, 166, 0.5) !important;
+    }
+
+
     .custom-scrollbar::-webkit-scrollbar { width: 4px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
@@ -104,6 +198,10 @@
     const btnToggle = document.getElementById('btn-toggle');
     const btnReset = document.getElementById('btn-reset');
     const progressBar = document.getElementById('progress-bar');
+    const timerContainer = document.getElementById('timer-container');
+    
+    const motivationContent = document.getElementById('ai-motivation-content');
+    const motivationLoading = document.getElementById('ai-motivation-loading');
 
     function updateDisplay() {
         const mins = Math.floor(timeLeft / 60).toString().padStart(2, '0');
@@ -115,18 +213,66 @@
         progressBar.style.width = `${progress}%`;
     }
 
+    function fetchMotivation() {
+        const selectedRadio = document.querySelector('input[name="session_task"]:checked');
+        const taskName = selectedRadio ? selectedRadio.value : "";
+        
+        motivationContent.classList.add('hidden');
+        motivationLoading.classList.remove('hidden');
+        motivationLoading.classList.add('flex');
+
+        const csrfToken = '{{ csrf_token }}';
+        fetch('{% url "api-pomodoro-motivation" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ task_name: taskName })
+        })
+        .then(res => res.json())
+        .then(data => {
+            motivationLoading.classList.add('hidden');
+            motivationLoading.classList.remove('flex');
+            motivationContent.classList.remove('hidden');
+            
+            if (data.success && data.message) {
+                let text = data.message;
+                if (taskName && !text.includes(taskName)) {
+                    text = `Focusing on "${taskName}"... ${text}`;
+                }
+                motivationContent.innerHTML = `<p class="text-white text-xl font-bold leading-relaxed drop-shadow-md">"${text}"</p>`;
+            } else {
+                motivationContent.innerHTML = `<p class="text-white text-xl font-bold leading-relaxed">"Stay focused, Muhammed! Every session counts."</p>`;
+            }
+        })
+        .catch(() => {
+            motivationLoading.classList.add('hidden');
+            motivationLoading.classList.remove('flex');
+            motivationContent.classList.remove('hidden');
+            motivationContent.innerHTML = `<p class="text-white text-xl font-bold leading-relaxed">"Deep work is rare. You're building real value right now."</p>`;
+        });
+    }
+
     function toggleTimer() {
         if (isRunning) {
             clearInterval(timerId);
+            timerContainer.classList.remove('timer-running');
             btnToggle.textContent = 'Resume';
-            btnToggle.className = 'bg-teal-600 hover:bg-teal-700 text-white font-bold py-4 px-10 rounded-2xl shadow-lg shadow-teal-200 transition-all active:scale-95 w-36';
+            btnToggle.className = 'bg-teal-600 hover:bg-teal-700 text-white font-black py-5 px-16 rounded-3xl shadow-lg shadow-teal-900/50 transition-all duration-300 hover:-translate-y-1 active:scale-95 w-48 uppercase tracking-widest text-sm';
         } else {
+            if (isFocus && timeLeft === focusTime) {
+                fetchMotivation();
+            }
+
+            timerContainer.classList.add('timer-running');
             timerId = setInterval(() => {
                 timeLeft--;
                 updateDisplay();
                 if (timeLeft <= 0) {
                     clearInterval(timerId);
                     isRunning = false;
+                    timerContainer.classList.remove('timer-running');
                     
                     if (isFocus) {
                         recordSession();
@@ -135,13 +281,18 @@
                     isFocus = !isFocus;
                     timeLeft = isFocus ? focusTime : breakTime;
                     mode.textContent = isFocus ? 'Focus Session' : 'Short Break';
-                    mode.className = isFocus ? 'text-xs font-bold text-teal-600 uppercase tracking-[0.2em] mb-4' : 'text-xs font-bold text-blue-600 uppercase tracking-[0.2em] mb-4';
+                    mode.className = isFocus ? 'text-sm font-black text-teal-500 uppercase tracking-[0.5em] mb-6' : 'text-sm font-black text-blue-500 uppercase tracking-[0.5em] mb-6';
                     btnToggle.textContent = 'Start';
+                    
+                    if (!isFocus) {
+                        motivationContent.innerHTML = `<p class="text-blue-300 text-xl font-bold leading-relaxed drop-shadow-md">"Great job! Take a breather and relax your mind."</p>`;
+                    }
+
                     updateDisplay();
                 }
             }, 1000);
             btnToggle.textContent = 'Pause';
-            btnToggle.className = 'bg-amber-500 hover:bg-amber-600 text-white font-bold py-4 px-10 rounded-2xl shadow-lg shadow-amber-200 transition-all active:scale-95 w-36';
+            btnToggle.className = 'bg-amber-500 hover:bg-amber-600 text-white font-black py-5 px-16 rounded-3xl shadow-lg shadow-amber-900/50 transition-all duration-300 hover:-translate-y-1 active:scale-95 w-48 uppercase tracking-widest text-sm';
         }
         isRunning = !isRunning;
     }
@@ -149,10 +300,13 @@
     function resetTimer() {
         clearInterval(timerId);
         isRunning = false;
+        timerContainer.classList.remove('timer-running');
         timeLeft = isFocus ? focusTime : breakTime;
         updateDisplay();
         btnToggle.textContent = 'Start';
-        btnToggle.className = 'bg-teal-600 hover:bg-teal-700 text-white font-bold py-4 px-10 rounded-2xl shadow-lg shadow-teal-200 transition-all active:scale-95 w-36';
+        btnToggle.className = 'bg-teal-600 hover:bg-teal-500 text-white font-black py-5 px-16 rounded-3xl shadow-lg shadow-teal-900/50 transition-all duration-300 hover:-translate-y-1 active:scale-95 w-48 uppercase tracking-widest text-sm';
+        
+        motivationContent.innerHTML = `<p class="text-slate-400 text-sm italic">"Ready to focus? Select a task, start the timer, and let's get to work."</p>`;
     }
 
     function recordSession() {
@@ -167,7 +321,7 @@
         .then(res => res.json())
         .then(data => {
             if (data.success) {
-                location.reload(); // Simple way to update history
+                location.reload(); 
             }
         });
     }

@@ -5,47 +5,47 @@
 
 {% block content %}
 <div class="max-w-4xl mx-auto space-y-6">
-    <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
+    <div class="bg-theme-card rounded-xl shadow-sm border border-theme-border p-6 transition-colors duration-300">
         <div class="flex items-center justify-between mb-6">
-            <h2 class="text-lg font-bold text-slate-800">Your Tasks</h2>
-            <span class="text-sm font-medium text-slate-500 bg-slate-100 rounded-full px-3 py-1">{{ tasks.count }} total</span>
+            <h2 class="text-lg font-bold text-theme-text">Your Tasks</h2>
+            <span class="text-sm font-medium text-theme-text_muted bg-theme-bg border border-theme-border rounded-full px-3 py-1">{{ tasks.count }} total</span>
         </div>
         <div class="mb-6">
             <form id="create-task-form" class="flex gap-3">
                 <input id="task-title-input" type="text" placeholder="What needs to be done?"
-                    class="flex-1 px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                    class="flex-1 px-4 py-3 rounded-xl border border-theme-border bg-theme-bg text-sm text-theme-text placeholder-theme-text_muted focus:outline-none focus:ring-2 focus:ring-teal-500 transition-colors" />
                 <button id="btn-create-task" type="button" class="px-6 py-3 rounded-xl bg-teal-600 hover:bg-teal-700 transition-colors text-white text-sm font-bold shadow-sm">Add Task</button>
             </form>
         </div>
 
-        <div class="space-y-3" id="tasks-list">
+        <div class="space-y-3 custom-scrollbar" id="tasks-list">
             {% for task in tasks %}
-            <div class="flex items-center justify-between p-4 rounded-xl border border-slate-100 hover:border-teal-100 hover:bg-slate-50 transition-colors"
+            <div class="flex items-center justify-between p-4 rounded-xl border border-theme-border hover:border-teal-500/30 hover:bg-black/5 dark:hover:bg-slate-800/40 transition-colors group"
                  id="task-row-{{ task.id }}">
                 <div class="flex items-center gap-4 min-w-0 flex-1">
                     <button id="task-toggle-{{ task.id }}"
                         onclick="toggleTask({{ task.id }})"
-                        class="w-6 h-6 rounded-md border-2 border-slate-300 flex items-center justify-center text-white shrink-0 transition-all hover:border-teal-500 hover:bg-teal-50 {% if task.is_completed %}bg-teal-500 border-teal-500{% endif %}"
+                        class="w-6 h-6 rounded-md border-2 border-slate-300 dark:border-slate-600 flex items-center justify-center text-white shrink-0 transition-all hover:border-teal-500 hover:bg-teal-500/20 {% if task.is_completed %}bg-teal-500 border-teal-500{% endif %}"
                         aria-label="Toggle task {{ task.title }}">
                         {% if task.is_completed %}
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                         {% endif %}
                     </button>
                     <div class="min-w-0 flex-1">
-                        <p id="task-title-{{ task.id }}" class="text-base font-semibold text-slate-800 truncate transition-all {% if task.is_completed %}line-through text-slate-400{% endif %}">{{ task.title }}</p>
+                        <p id="task-title-{{ task.id }}" class="text-base font-semibold text-theme-text truncate transition-all {% if task.is_completed %}line-through opacity-50{% endif %}">{{ task.title }}</p>
                     </div>
                 </div>
-                <div class="flex items-center gap-4 shrink-0 pl-4">
-                    <button onclick="deleteTask({{ task.id }})" class="text-sm font-medium text-slate-400 hover:text-red-600 px-2 py-1 rounded transition-colors">Delete</button>
+                <div class="flex items-center gap-4 shrink-0 pl-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onclick="deleteTask({{ task.id }})" class="text-sm font-medium text-theme-text_muted hover:text-red-500 px-2 py-1 rounded transition-colors uppercase tracking-tighter">Delete</button>
                 </div>
             </div>
             {% empty %}
-            <div class="text-center py-12" id="tasks-empty-state">
-                <svg class="w-12 h-12 text-slate-200 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div class="text-center py-12 border border-dashed border-theme-border rounded-xl bg-black/5 dark:bg-slate-800/20" id="tasks-empty-state">
+                <svg class="w-12 h-12 text-theme-text_muted opacity-30 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
                 </svg>
-                <p class="text-base font-medium text-slate-600">No tasks on your to-do list.</p>
-                <p class="text-sm text-slate-400 mt-1">Enjoy your free time or add a new task!</p>
+                <p class="text-base font-medium text-theme-text">No tasks on your to-do list.</p>
+                <p class="text-sm text-theme-text_muted mt-1">Enjoy your free time or add a new task!</p>
             </div>
             {% endfor %}
         </div>
