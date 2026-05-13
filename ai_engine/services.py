@@ -121,7 +121,7 @@ def generate_event_tip(event_title: str, start_time) -> str | None:
         )
         return None
 
-def generate_dashboard_insight(username: str, events: list, habits: list, tone: str) -> str | None:
+def generate_dashboard_insight(username: str, events: list, habits: list, tone: str, pending_tasks_count: int = 0) -> str | None:
     """
     Call Gemini 1.5 Flash to produce a personalized, contextual dashboard tip.
     """
@@ -142,7 +142,12 @@ def generate_dashboard_insight(username: str, events: list, habits: list, tone: 
         if h.current_streak > 0:
             habits_context.append(f"'{h.name}' ({h.current_streak} day streak)")
 
-    prompt_content = f"User: {username}\nUpcoming Events (next 48h): {', '.join(events_context) if events_context else 'None'}\nActive Habit Streaks: {', '.join(habits_context) if habits_context else 'None'}"
+    prompt_content = (
+        f"User: {username}\n"
+        f"Pending Tasks: {pending_tasks_count}\n"
+        f"Upcoming Events (next 48h): {', '.join(events_context) if events_context else 'None'}\n"
+        f"Active Habit Streaks: {', '.join(habits_context) if habits_context else 'None'}"
+    )
     
     tone_instruction = "Be highly motivational and enthusiastic."
     if tone == "direct":
@@ -151,10 +156,11 @@ def generate_dashboard_insight(username: str, events: list, habits: list, tone: 
         tone_instruction = "Be humorous and witty."
 
     system_instruction = (
-        f"You are a sophisticated productivity assistant for {username}. "
-        "Review their upcoming events and habit streaks, and provide ONE short, highly personalized sentence of advice or encouragement. "
+        f"You are a sophisticated productivity assistant for {username}, a software engineering student. "
+        "Review their pending tasks, upcoming events, and habit streaks, then provide ONE short, highly personalized sentence of advice or encouragement. "
+        "Reference specific data when possible (e.g. mention an event title or a streak count). "
         f"{tone_instruction} "
-        "Do not use filler, markdown, or greetings. Keep it under 25 words."
+        "Do not use filler, markdown, or greetings. Keep it under 30 words."
     )
 
     try:
@@ -163,7 +169,7 @@ def generate_dashboard_insight(username: str, events: list, habits: list, tone: 
             contents=prompt_content,
             config=genai_types.GenerateContentConfig(
                 system_instruction=system_instruction,
-                max_output_tokens=60,
+                max_output_tokens=80,
                 temperature=0.7,
             ),
         )
@@ -171,3 +177,139 @@ def generate_dashboard_insight(username: str, events: list, habits: list, tone: 
     except Exception as exc:
         logger.error("Gemini API call failed for dashboard insight: %s", exc)
         return None
+
+
+def chat_with_data(username: str, data_json: str, user_question: str) -> str | None:
+    """
+    Chat with the user's productivity data using Gemini.
+
+    Parameters
+    ----------
+    username : str
+        The display name of the user (for personalisation).
+    data_json : str
+        A JSON string summarising the user's recent tasks, habits, and
+        pomodoro sessions.
+    user_question : str
+        The natural-language question asked by the user.
+
+    Returns
+    -------
+    str | None
+        The AI-generated answer, or None on failure.
+    """
+    if not _CLIENT_READY or _client is None:
+        logger.debug("Skipping AI chat: client not ready.")
+        return None
+
+    system_instruction = (
+        f"You are a productivity assistant for {username}. "
+        "Based on the provided JSON data of his tasks, habits, and pomodoro sessions, "
+        "answer his questions accurately. Be concise and reference specific data points "
+        "when possible. Respond in a warm but professional tone. "
+        "Keep responses under 100 words. Do not use markdown formatting."
+    )
+
+    prompt_content = (
+        f"Here is my recent productivity data (last 7 days):\n"
+        f"{data_json}\n\n"
+        f"My question: {user_question}"
+    )
+
+    try:
+        response = _client.models.generate_content(
+            model=_MODEL_NAME,
+            contents=prompt_content,
+            config=genai_types.GenerateContentConfig(
+                system_instruction=system_instruction,
+                max_output_tokens=300,
+                temperature=0.5,
+            ),
+        )
+        answer = response.text.strip() if response.text else None
+        if answer:
+            logger.info("AI chat response generated for user '%s'.", username)
+        return answer
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Gemini API chat call failed: %s", exc)
+        return None
+
+
+def generate_roadmap(username: str, target_goal: str) -> dict | None:
+    """
+    Ask Gemini to break a target goal into 5 specific tasks and 2 daily habits.
+
+    Parameters
+    ----------
+    username : str
+        The display name of the user.
+    target_goal : str
+        The goal to decompose (e.g. "Learn Flutter").
+
+    Returns
+    -------
+    dict | None
+        A dict with keys ``"tasks"`` (list of 5 strings) and ``"habits"``
+        (list of 2 strings), or None on failure.
+    """
+    if not _CLIENT_READY or _client is None:
+        logger.debug("Skipping roadmap generation: client not ready.")
+        return None
+
+    system_instruction = (
+        f"You are a productivity coach for {username}. "
+        "When given a goal, return a JSON object with exactly 5 actionable tasks "
+        "and 2 daily habits. Keep each item under 10 words. "
+        "Use this exact JSON schema: "
+        '{"tasks":["t1","t2","t3","t4","t5"],"habits":["h1","h2"]}'
+    )
+
+    try:
+        response = _client.models.generate_content(
+            model=_MODEL_NAME,
+            contents=f"My goal: {target_goal}",
+            config=genai_types.GenerateContentConfig(
+                system_instruction=system_instruction,
+                max_output_tokens=1024,
+                temperature=0.7,
+                response_mime_type="application/json",
+            ),
+        )
+        raw = response.text.strip() if response.text else None
+        if not raw:
+            return None
+
+        # Strip markdown code fences if Gemini wraps the JSON
+        import re
+        cleaned = re.sub(r"^```(?:json)?\s*", "", raw)
+        cleaned = re.sub(r"\s*```$", "", cleaned)
+
+        import json as _json
+        result = _json.loads(cleaned)
+
+        # Validate structure
+        if (
+            isinstance(result, dict)
+            and isinstance(result.get("tasks"), list)
+            and isinstance(result.get("habits"), list)
+            and len(result["tasks"]) >= 1
+            and len(result["habits"]) >= 1
+        ):
+            logger.info(
+                "Roadmap generated for goal '%s': %d tasks, %d habits.",
+                target_goal,
+                len(result["tasks"]),
+                len(result["habits"]),
+            )
+            return result
+
+        logger.warning("Roadmap response had unexpected structure: %s", raw)
+        return None
+
+    except (_json.JSONDecodeError, ValueError) as exc:
+        logger.error("Failed to parse roadmap JSON: %s — raw: %s", exc, raw)
+        return None
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Gemini roadmap API call failed: %s", exc)
+        return None
+
